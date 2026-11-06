@@ -99,6 +99,42 @@ async def test_review_validates_model_dispatches_and_stores_pointer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_review_accepts_full_github_pull_request_url() -> None:
+    client = AsyncMock()
+    client.allowed_repositories = frozenset({"sakomws/everyballwins"})
+    client.pull_request.return_value = _pull_request()
+    inference = AsyncMock()
+    inference.list_models.return_value = ("thread-model",)
+    context = _context("review https://github.com/sakomws/everyballwins/pull/6")
+
+    await _route(_plugin(client, inference), "review")(context)
+
+    client.pull_request.assert_awaited_once_with("sakomws/everyballwins", 6)
+    client.dispatch.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://github.example/sakomws/everyballwins/pull/6",
+        "https://github.com/sakomws/everyballwins/issues/6",
+        "https://github.com/sakomws/everyballwins/pull/6?diff=split",
+    ],
+)
+async def test_review_rejects_unsupported_or_ambiguous_urls(target: str) -> None:
+    client = AsyncMock()
+    context = _context(f"review {target}")
+
+    await _route(_plugin(client, AsyncMock()), "review")(context)
+
+    client.pull_request.assert_not_awaited()
+    assert (
+        "https://github.com/owner/repository/pull/number" in (context.say.await_args.kwargs["text"])
+    )
+
+
+@pytest.mark.asyncio
 async def test_review_button_dispatches_with_encoded_thread_model() -> None:
     client = AsyncMock()
     client.allowed_repositories = frozenset({"owner/repo"})

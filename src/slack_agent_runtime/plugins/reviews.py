@@ -6,6 +6,7 @@ import json
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 from slack_agent_runtime.coding.github import CodingJobError
 from slack_agent_runtime.domain.commands import HelpEntry
@@ -24,7 +25,10 @@ class PullRequestReviewPlugin:
     name = "reviews"
     help_entries = (
         HelpEntry("Pull requests", "prs owner/repository [open|closed|all|draft] [page N]"),
-        HelpEntry("Pull requests", "review owner/repository#number [model MODEL]"),
+        HelpEntry(
+            "Pull requests",
+            "review owner/repository#number or GitHub PR URL [model MODEL]",
+        ),
         HelpEntry("Pull requests", "review status"),
     )
 
@@ -291,10 +295,11 @@ def _parse_prs(prompt: str) -> tuple[str, str, bool, int]:
 
 def _parse_review(words: list[str], default_model: str) -> tuple[str, int, str]:
     if len(words) not in {2, 4} or (len(words) == 4 and words[2].lower() != "model"):
-        raise ValueError("Use `review owner/repository#number [model MODEL]`.")
-    repository, separator, raw_number = words[1].rpartition("#")
-    if not separator or not repository:
-        raise ValueError("Pull request must use `owner/repository#number`.")
+        raise ValueError(
+            "Use `review owner/repository#number [model MODEL]` or "
+            "`review https://github.com/owner/repository/pull/number [model MODEL]`."
+        )
+    repository, raw_number = _parse_pull_request_target(words[1])
     try:
         number = int(raw_number)
     except ValueError as exc:
@@ -302,3 +307,28 @@ def _parse_review(words: list[str], default_model: str) -> tuple[str, int, str]:
     if number < 1:
         raise ValueError("Pull request number must be a positive integer")
     return repository, number, words[3] if len(words) == 4 else default_model
+
+
+def _parse_pull_request_target(target: str) -> tuple[str, str]:
+    if "://" in target:
+        parsed = urlsplit(target)
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc.lower() != "github.com"
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(
+                "Pull request URL must use `https://github.com/owner/repository/pull/number`."
+            )
+        parts = parsed.path.strip("/").split("/")
+        if len(parts) != 4 or parts[2] != "pull" or not parts[0] or not parts[1]:
+            raise ValueError(
+                "Pull request URL must use `https://github.com/owner/repository/pull/number`."
+            )
+        return f"{parts[0]}/{parts[1]}", parts[3]
+
+    repository, separator, raw_number = target.rpartition("#")
+    if not separator or not repository:
+        raise ValueError("Pull request must use `owner/repository#number` or a full GitHub PR URL.")
+    return repository, raw_number

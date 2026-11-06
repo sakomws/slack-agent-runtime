@@ -223,7 +223,7 @@ Socket Mode distributes events across all active connections for the same app.
 
 - `prs owner/repository [open|closed|all|draft] [page N]` — list pull requests
   with review buttons
-- `review owner/repository#number [model MODEL]` — run an independent PR review
+- `review owner/repository#number [model MODEL]` or `review https://github.com/owner/repository/pull/number [model MODEL]` — run an independent PR review
 - `review status` — show the latest review workflow status
 
 All settings are scoped per thread. `default` removes an override.
