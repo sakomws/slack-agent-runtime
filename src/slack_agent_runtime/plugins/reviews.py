@@ -27,12 +27,18 @@ class PullRequestReviewPlugin:
         HelpEntry(
             "Pull requests",
             "prs owner/repository or GitHub repository URL [open|closed|all|draft] [page N]",
+            "list pull requests with review buttons",
         ),
         HelpEntry(
             "Pull requests",
             "review owner/repository#number or GitHub PR URL [model MODEL]",
+            "run an independent pull request review",
         ),
-        HelpEntry("Pull requests", "review status"),
+        HelpEntry(
+            "Pull requests",
+            "review status",
+            "show the latest review workflow status",
+        ),
     )
 
     def __init__(

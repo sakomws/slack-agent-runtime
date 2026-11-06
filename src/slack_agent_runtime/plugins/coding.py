@@ -59,10 +59,26 @@ page and do not invent details.
 class CodingPlugin:
     name = "coding"
     help_entries = (
-        HelpEntry("Coding jobs", "code owner/repository <feature request>"),
-        HelpEntry("Coding jobs", "code owner/repository from notion <page URL>"),
-        HelpEntry("Coding jobs", "code status"),
-        HelpEntry("Specification review", "spec review from notion <page URL>"),
+        HelpEntry(
+            "Coding jobs",
+            "code owner/repository <feature request>",
+            "start an allowlisted GitHub coding job",
+        ),
+        HelpEntry(
+            "Coding jobs",
+            "code owner/repository from notion <page URL>",
+            "retrieve a grounded Notion specification, then start a coding job",
+        ),
+        HelpEntry(
+            "Coding jobs",
+            "code status",
+            "show the latest coding job's durable GitHub Actions status",
+        ),
+        HelpEntry(
+            "Specification review",
+            "spec review from notion <page URL>",
+            "review and rewrite a grounded Notion specification",
+        ),
     )
 
     def __init__(

@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 class McpPlugin:
     name = "mcp"
     help_entries = (
-        HelpEntry("MCP tools", "tools"),
-        HelpEntry("MCP tools", "mcp status"),
-        HelpEntry("MCP tools", "mcp servers"),
+        HelpEntry("MCP tools", "tools", "list tools and their approval behavior"),
+        HelpEntry("MCP tools", "mcp status", "show MCP connection and tool counts"),
+        HelpEntry("MCP tools", "mcp servers", "list connected MCP servers"),
     )
 
     def __init__(
