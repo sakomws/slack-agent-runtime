@@ -71,20 +71,22 @@ class PullRequestReview:
                 ]
             )
         else:
-            lines.extend(
-                [
-                    "| Severity | Finding | Location | Recommendation |",
-                    "| --- | --- | --- | --- |",
-                ]
-            )
-            for finding in self.findings:
+            lines.extend(["### Findings", ""])
+            for index, finding in enumerate(self.findings, start=1):
                 location = finding.file
                 if finding.line is not None:
                     location += f":{finding.line}"
-                lines.append(
-                    f"| {finding.severity.upper()} | {_cell(finding.title)} — "
-                    f"{_cell(finding.description)} | {_cell(location)} | "
-                    f"{_cell(finding.recommendation)} |"
+                lines.extend(
+                    [
+                        f"#### {index}. {finding.severity.upper()} — {_markdown(finding.title)}",
+                        "",
+                        f"**Location:** `{_inline_code(location)}`",
+                        "",
+                        f"**Issue:** {_markdown(finding.description)}",
+                        "",
+                        f"**Recommendation:** {_markdown(finding.recommendation)}",
+                        "",
+                    ]
                 )
         lines.extend(
             [
@@ -223,5 +225,9 @@ def _sanitize(value: str, limit: int) -> str:
     return _SECRET_LIKE.sub("[REDACTED]", cleaned).strip()[:limit]
 
 
-def _cell(value: str) -> str:
-    return _sanitize(value, 2_000).replace("|", "\\|").replace("\n", " ")
+def _markdown(value: str) -> str:
+    return _sanitize(value, 2_000).replace("\n", " ")
+
+
+def _inline_code(value: str) -> str:
+    return _markdown(value).replace("`", "\\`")

@@ -49,7 +49,12 @@ async def test_reviewer_returns_structured_blocking_review() -> None:
 
     assert review.blocking is True
     assert review.event == "REQUEST_CHANGES"
-    assert "| HIGH |" in review.markdown()
+    markdown = review.markdown()
+    assert "#### 1. HIGH — Authorization bypass" in markdown
+    assert "**Location:** `src/auth.py:42`" in markdown
+    assert "**Issue:** The new path skips authorization." in markdown
+    assert "**Recommendation:** Apply the existing authorization check." in markdown
+    assert "| Severity |" not in markdown
     messages = client.complete.await_args.kwargs["messages"]
     assert "untrusted data" in messages[0]["content"]
     assert client.complete.await_args.kwargs["model"] == "review-model"
