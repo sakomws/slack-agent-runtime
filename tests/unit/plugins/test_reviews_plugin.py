@@ -73,6 +73,50 @@ async def test_prs_lists_allowlisted_pull_requests_with_review_buttons() -> None
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://github.com/owner/repo",
+        "<https://github.com/owner/repo>",
+        "<https://github.com/owner/repo|github.com/owner/repo>",
+    ],
+)
+async def test_prs_accepts_full_github_repository_url(target: str) -> None:
+    client = AsyncMock()
+    client.allowed_repositories = frozenset({"owner/repo"})
+    client.list_pull_requests.return_value = ()
+    context = _context(f"prs {target} closed page 3")
+
+    await _route(_plugin(client, AsyncMock()), "prs")(context)
+
+    client.list_pull_requests.assert_awaited_once_with(
+        "owner/repo",
+        state="closed",
+        page=3,
+        per_page=10,
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://github.example/owner/repo",
+        "https://github.com/owner/repo/issues",
+        "https://github.com/owner/repo?tab=readme",
+    ],
+)
+async def test_prs_rejects_unsupported_or_ambiguous_urls(target: str) -> None:
+    client = AsyncMock()
+    context = _context(f"prs {target}")
+
+    await _route(_plugin(client, AsyncMock()), "prs")(context)
+
+    client.list_pull_requests.assert_not_awaited()
+    assert "https://github.com/owner/repository" in context.say.await_args.kwargs["text"]
+
+
+@pytest.mark.asyncio
 async def test_review_validates_model_dispatches_and_stores_pointer() -> None:
     client = AsyncMock()
     client.allowed_repositories = frozenset({"owner/repo"})

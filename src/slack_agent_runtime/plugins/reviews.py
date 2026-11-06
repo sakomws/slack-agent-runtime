@@ -24,7 +24,10 @@ if TYPE_CHECKING:
 class PullRequestReviewPlugin:
     name = "reviews"
     help_entries = (
-        HelpEntry("Pull requests", "prs owner/repository [open|closed|all|draft] [page N]"),
+        HelpEntry(
+            "Pull requests",
+            "prs owner/repository or GitHub repository URL [open|closed|all|draft] [page N]",
+        ),
         HelpEntry(
             "Pull requests",
             "review owner/repository#number or GitHub PR URL [model MODEL]",
@@ -272,8 +275,11 @@ class PullRequestReviewPlugin:
 def _parse_prs(prompt: str) -> tuple[str, str, bool, int]:
     words = prompt.split()
     if len(words) < 2:
-        raise CodingJobError("Use `prs owner/repository [open|closed|all|draft] [page N]`.")
-    repository = words[1]
+        raise CodingJobError(
+            "Use `prs owner/repository [open|closed|all|draft] [page N]` or "
+            "`prs https://github.com/owner/repository [open|closed|all|draft] [page N]`."
+        )
+    repository = _parse_repository_target(words[1])
     state = "open"
     drafts_only = False
     page = 1
@@ -285,7 +291,11 @@ def _parse_prs(prompt: str) -> tuple[str, str, bool, int]:
         index += 1
     if index < len(words):
         if len(words) != index + 2 or words[index].lower() != "page":
-            raise CodingJobError("Use `prs owner/repository [open|closed|all|draft] [page N]`.")
+            raise CodingJobError(
+                "Use `prs owner/repository [open|closed|all|draft] [page N]` or "
+                "`prs https://github.com/owner/repository "
+                "[open|closed|all|draft] [page N]`."
+            )
         try:
             page = int(words[index + 1])
         except ValueError as exc:
@@ -310,8 +320,7 @@ def _parse_review(words: list[str], default_model: str) -> tuple[str, int, str]:
 
 
 def _parse_pull_request_target(target: str) -> tuple[str, str]:
-    if target.startswith("<") and target.endswith(">"):
-        target = target[1:-1].split("|", 1)[0]
+    target = _unwrap_slack_link(target)
     if "://" in target:
         parsed = urlsplit(target)
         if (
@@ -334,3 +343,27 @@ def _parse_pull_request_target(target: str) -> tuple[str, str]:
     if not separator or not repository:
         raise ValueError("Pull request must use `owner/repository#number` or a full GitHub PR URL.")
     return repository, raw_number
+
+
+def _parse_repository_target(target: str) -> str:
+    target = _unwrap_slack_link(target)
+    if "://" not in target:
+        return target
+    parsed = urlsplit(target)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc.lower() != "github.com"
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise CodingJobError("Repository URL must use `https://github.com/owner/repository`.")
+    parts = parsed.path.strip("/").split("/")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise CodingJobError("Repository URL must use `https://github.com/owner/repository`.")
+    return f"{parts[0]}/{parts[1]}"
+
+
+def _unwrap_slack_link(target: str) -> str:
+    if target.startswith("<") and target.endswith(">"):
+        return target[1:-1].split("|", 1)[0]
+    return target
