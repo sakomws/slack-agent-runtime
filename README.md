@@ -20,10 +20,12 @@ uses You.com for that endpoint. GitHub Actions runs bounded coding and review
 workers, while GitHub stores code artifacts such as branches, diffs, pull
 requests, and reviews.
 
-![Slack Engineering Agent Architecture](docs/images/slack-engineering-agent-architecture.jpg)
+<p align="center">
+  <img src="docs/images/slack-engineering-agent-architecture.svg" alt="Slack Engineering Agent Architecture: the Slack harness calls the Agent Runtime, which uses a You.com inference-and-search endpoint, thread state, and an MCP approval broker over Notion, Linear and Slack data, and dispatches bounded workers to GitHub Actions" width="100%">
+</p>
 
-_The pictured MCP sources are representative; the runtime also supports Linear
-work items through the governed MCP data layer._
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 flowchart LR
@@ -41,6 +43,8 @@ flowchart LR
     A -->|GitHub credential after worker exits| G[GitHub code artifacts]
     A -->|Slack credential after worker exits| S
 ```
+
+</details>
 
 The model-facing worker receives inference credentials only. GitHub and Slack
 credentials are scoped to separate later Actions steps after the worker exits.

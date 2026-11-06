@@ -74,7 +74,7 @@ Optional Q&A is outside the 30-minute talk.
 - **GitHub code-artifact layer:** repositories, branches, diffs, reviews, and
   pull requests
 
-![Slack Engineering Agent Architecture](images/slack-engineering-agent-architecture.jpg)
+![Slack Engineering Agent Architecture](images/slack-engineering-agent-architecture.svg)
 
 The pictured MCP sources are representative; Linear work items are also
 available through the governed MCP data layer.

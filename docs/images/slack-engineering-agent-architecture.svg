@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 715" width="1360" height="715" role="img" aria-labelledby="title desc">
+  <title id="title">Slack Engineering Agent Architecture</title>
+  <desc id="desc">An engineer talks to a Slack interaction harness, which calls the Agent Runtime. The runtime uses a You.com OpenAI-compatible inference-and-search endpoint, thread state, and an MCP approval broker over Notion specifications, Linear work items and Slack data. For code work it sends a repository_dispatch to GitHub Actions, which runs a bounded coding or review worker with inference credentials only and loops until output is validated. Only after the worker exits does Actions use a GitHub credential to publish code artifacts and a Slack credential to post results back to the harness.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .card { fill: #ffffff; stroke: #d0d7de; stroke-width: 1.5; }
+    .t { fill: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+    .h1 { font-size: 26px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 600; }
+    .s { font-size: 12.5px; fill: #59636e; }
+    .xs { font-size: 11.5px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+    .edge { fill: none; stroke: #59636e; stroke-width: 1.75; }
+    .loop { fill: none; stroke: #8250df; stroke-width: 1.75; }
+    .head { fill: #59636e; }
+    .headp { fill: #8250df; }
+    .ico { fill: none; stroke: #1f2328; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .runtime { fill: #8250df; }
+    .rt { fill: #ffffff; }
+    .rts { fill: #ece2ff; font-size: 12px; }
+    .rico { fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .data { fill: #dafbe1; stroke: #4ac26b; stroke-width: 1.5; }
+    .ext { fill: #ddf4ff; stroke: #54aeff; stroke-width: 1.5; }
+    .compute { fill: #fbefff; stroke: #c297ff; stroke-width: 1.5; }
+    .cred { fill: #fff8c5; stroke: #d4a72c; stroke-width: 1.25; }
+    .lbl { fill: #ffffff; stroke: #d0d7de; stroke-width: 1.25; }
+    .ok { fill: none; stroke: #1a7f37; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .lock { fill: none; stroke: #9a6700; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .card { fill: #161b22; stroke: #3d444d; }
+      .t { fill: #e6edf3; }
+      .s { fill: #9198a1; }
+      .edge { stroke: #9198a1; }
+      .head { fill: #9198a1; }
+      .loop { stroke: #ab7df8; }
+      .headp { fill: #ab7df8; }
+      .ico { stroke: #e6edf3; }
+      .runtime { fill: #6e40c9; }
+      .data { fill: #0f2d1b; stroke: #2ea043; }
+      .ext { fill: #0c2341; stroke: #1f6feb; }
+      .compute { fill: #2a1650; stroke: #8957e5; }
+      .cred { fill: #2e2410; stroke: #9e6a03; }
+      .lbl { fill: #161b22; stroke: #3d444d; }
+      .ok { stroke: #3fb950; }
+      .lock { stroke: #d29922; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="headp" d="M0,0 L10,5 L0,10 z"/></marker>
+    <symbol id="lk" viewBox="0 0 16 16"><rect class="lock" x="3" y="7" width="10" height="7.5" rx="1.5"/><path class="lock" d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></symbol>
+  </defs>
+
+  <rect class="bg" width="1360" height="715"/>
+
+  <!-- Header -->
+  <text class="t h1" x="40" y="52">Slack Engineering Agent Architecture</text>
+  <text class="t s" x="40" y="80" style="font-size:14.5px">Slack  ↔  Agent Runtime  ↔  You.com  ↔  MCP / data  ↔  GitHub Actions</text>
+
+  <g transform="translate(0,75)">
+    <!-- ===== Edges (drawn first, under boxes) ===== -->
+    <path class="edge" d="M160 300 H198" marker-end="url(#a)"/>
+    <path class="edge" d="M350 300 H388" marker-end="url(#a)"/>
+    <!-- runtime fan-out -->
+    <path class="edge" d="M560 300 H590 V80 H618" marker-end="url(#a)"/>
+    <path class="edge" d="M590 180 H618" marker-end="url(#a)"/>
+    <path class="edge" d="M590 300 V325 H618" marker-end="url(#a)"/>
+    <!-- repository_dispatch -->
+    <path class="edge" d="M475 370 V450 H935 V230 H958" marker-end="url(#a)"/>
+    <!-- Actions -> outputs -->
+    <path class="edge" d="M1062 410 V518" marker-end="url(#a)"/>
+    <path class="edge" d="M1247 410 V518" marker-end="url(#a)"/>
+    <!-- results back to the harness -->
+    <path class="edge" d="M1247 600 V620 H275 V342" marker-end="url(#a)"/>
+
+    <!-- ===== Engineer ===== -->
+    <rect class="card" x="40" y="255" width="120" height="90" rx="12"/>
+    <g transform="translate(88,268)"><circle class="ico" cx="12" cy="8" r="6"/><path class="ico" d="M1 27c1.5-6 6-9 11-9s9.5 3 11 9"/></g>
+    <text class="t h2" x="100" y="325" text-anchor="middle">Engineer</text>
+
+    <!-- ===== Slack harness ===== -->
+    <rect class="card" x="200" y="255" width="150" height="90" rx="12"/>
+    <g transform="translate(263,266)"><path class="ico" d="M3 4h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10l-5 4v-4H3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path class="ico" d="M7 11h10"/></g>
+    <text class="t h2" x="275" y="313" text-anchor="middle">Slack interaction</text>
+    <text class="t h2" x="275" y="332" text-anchor="middle">harness</text>
+
+    <!-- ===== Agent Runtime ===== -->
+    <rect class="runtime" x="390" y="230" width="170" height="140" rx="16"/>
+    <g transform="translate(461,248)"><path class="rico" d="M14 2l3 8 8 3-8 3-3 8-3-8-8-3 8-3z"/></g>
+    <text class="t h2 rt" x="475" y="300" text-anchor="middle" style="font-size:18px">Agent Runtime</text>
+    <text class="t rts" x="475" y="322" text-anchor="middle">reasoning · planning</text>
+    <text class="t rts" x="475" y="339" text-anchor="middle">orchestration</text>
+
+    <!-- ===== You.com endpoint ===== -->
+    <rect class="ext" x="620" y="40" width="290" height="80" rx="12"/>
+    <g transform="translate(638,66)"><circle class="ico" cx="11" cy="11" r="7"/><path class="ico" d="M16 16l6 6"/></g>
+    <text class="t h2" x="676" y="73">You.com endpoint</text>
+    <text class="t s" x="676" y="93">OpenAI-compatible inference + search</text>
+
+    <!-- ===== Thread state ===== -->
+    <rect class="card" x="620" y="140" width="290" height="80" rx="12"/>
+    <g transform="translate(640,165)"><ellipse class="ico" cx="10" cy="5" rx="9" ry="3.5"/><path class="ico" d="M1 5v14c0 2 4 3.5 9 3.5s9-1.5 9-3.5V5"/><path class="ico" d="M1 12c0 2 4 3.5 9 3.5s9-1.5 9-3.5"/></g>
+    <text class="t h2" x="676" y="173">Thread state</text>
+    <text class="t s" x="676" y="193">conversation, context, plans</text>
+
+    <!-- ===== MCP broker ===== -->
+    <rect class="data" x="620" y="240" width="290" height="170" rx="12"/>
+    <g transform="translate(640,256)"><path class="ico" d="M11 2l9 4.5-9 4.5-9-4.5z"/><path class="ico" d="M2 11l9 4.5 9-4.5"/><path class="ico" d="M2 15.5l9 4.5 9-4.5"/></g>
+    <text class="t h2" x="676" y="270">MCP approval broker</text>
+    <text class="t s" x="676" y="290">and data layer</text>
+    <rect class="card" x="636" y="310" width="82" height="80" rx="10"/>
+    <g transform="translate(667,322)"><path class="ico" d="M3 1h9l5 5v14H3z"/><path class="ico" d="M12 1v5h5M6 11h8M6 15h6"/></g>
+    <text class="t h2" x="677" y="363" text-anchor="middle" style="font-size:13.5px">Notion</text>
+    <text class="t s xs" x="677" y="380" text-anchor="middle">specs</text>
+    <rect class="card" x="724" y="310" width="82" height="80" rx="10"/>
+    <g transform="translate(754,322)"><rect class="ico" x="1" y="1" width="20" height="20" rx="4"/><path class="ico" d="M6 8h10M6 12h10M6 16h6"/></g>
+    <text class="t h2" x="765" y="363" text-anchor="middle" style="font-size:13.5px">Linear</text>
+    <text class="t s xs" x="765" y="380" text-anchor="middle">work items</text>
+    <rect class="card" x="812" y="310" width="82" height="80" rx="10"/>
+    <g transform="translate(841,322)"><path class="ico" d="M3 3h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10l-5 4v-4H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></g>
+    <text class="t h2" x="853" y="363" text-anchor="middle" style="font-size:13.5px">Slack data</text>
+    <text class="t s xs" x="853" y="380" text-anchor="middle">threads</text>
+
+    <!-- repository_dispatch label -->
+    <rect class="lbl" x="700" y="436" width="174" height="28" rx="14"/>
+    <text class="t mono" x="787" y="455" text-anchor="middle">repository_dispatch</text>
+
+    <!-- ===== GitHub Actions ===== -->
+    <rect class="ext" x="960" y="40" width="370" height="370" rx="16"/>
+    <g transform="translate(980,62)"><circle class="ico" cx="12" cy="12" r="10"/><path class="ico" d="M10 8l5 4-5 4z"/></g>
+    <text class="t h2" x="1016" y="76" style="font-size:17px">GitHub Actions</text>
+    <text class="t s" x="1016" y="96">bounded execution</text>
+
+    <rect class="cred" x="1035" y="114" width="220" height="30" rx="15"/>
+    <use href="#lk" x="1049" y="121" width="16" height="16"/>
+    <text class="t xs" x="1072" y="134">inference credentials only</text>
+    <path class="edge" d="M1145 144 V173" marker-end="url(#a)"/>
+
+    <rect class="compute" x="1010" y="175" width="270" height="70" rx="12"/>
+    <g transform="translate(1030,198)"><path class="ico" d="M7 4L1 12l6 8M17 4l6 8-6 8M14 2l-4 20"/></g>
+    <text class="t h2" x="1064" y="206">Bounded worker</text>
+    <text class="t s" x="1064" y="225">coding or review task</text>
+
+    <rect class="card" x="1010" y="290" width="270" height="70" rx="12"/>
+    <g transform="translate(1030,313)"><circle class="ok" cx="12" cy="12" r="10"/><path class="ok" d="M7 12.5l3.5 3.5 7-7"/></g>
+    <text class="t h2" x="1064" y="321">Validated output</text>
+    <text class="t s" x="1064" y="340">tests, checks, guardrails</text>
+
+    <path class="loop" d="M1280 210 H1305 V325 H1282" marker-end="url(#ap)"/>
+    <path class="loop" d="M1010 325 H985 V210 H1008" marker-end="url(#ap)"/>
+    <text class="t s xs" x="1145" y="275" text-anchor="middle">retry until checks pass</text>
+
+    <!-- credential pills -->
+    <rect class="cred" x="985" y="440" width="154" height="44" rx="10"/>
+    <use href="#lk" x="995" y="454" width="16" height="16"/>
+    <text class="t xs" x="1017" y="458">GitHub credential</text>
+    <text class="t xs s" x="1017" y="474">after worker exits</text>
+    <rect class="cred" x="1170" y="440" width="154" height="44" rx="10"/>
+    <use href="#lk" x="1180" y="454" width="16" height="16"/>
+    <text class="t xs" x="1202" y="458">Slack credential</text>
+    <text class="t xs s" x="1202" y="474">after worker exits</text>
+
+    <!-- outputs -->
+    <rect class="card" x="980" y="520" width="165" height="80" rx="12"/>
+    <g transform="translate(996,534)"><circle class="ico" cx="6" cy="5" r="3"/><circle class="ico" cx="6" cy="21" r="3"/><circle class="ico" cx="18" cy="9" r="3"/><path class="ico" d="M6 8v10M18 12c0 4-6 4-11 7"/></g>
+    <text class="t h2" x="1026" y="551">GitHub</text>
+    <text class="t s xs" x="996" y="576">code artifacts:</text>
+    <text class="t s xs" x="996" y="591">PRs, commits, diffs</text>
+    <rect class="card" x="1165" y="520" width="165" height="80" rx="12"/>
+    <g transform="translate(1180,534)"><path class="ico" d="M3 3h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10l-5 4v-4H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></g>
+    <text class="t h2" x="1211" y="551">Slack</text>
+    <text class="t s xs" x="1181" y="576">results, summaries,</text>
+    <text class="t s xs" x="1181" y="591">next actions</text>
+
+    <!-- return label -->
+    <rect class="lbl" x="640" y="606" width="200" height="28" rx="14"/>
+    <text class="t xs" x="740" y="624" text-anchor="middle">posted back to the thread</text>
+
+    <!-- ===== Legend ===== -->
+    <g transform="translate(40,440)">
+      <rect class="card" x="0" y="0" width="215" height="154" rx="10"/>
+      <text class="t h2" x="14" y="24" style="font-size:13px">Legend</text>
+      <path class="edge" d="M14 43 H44" marker-end="url(#a)"/>
+      <text class="t xs" x="54" y="47">request / response</text>
+      <rect class="runtime" x="14" y="58" width="30" height="14" rx="4"/>
+      <text class="t xs" x="54" y="70">agent compute</text>
+      <rect class="data" x="14" y="80" width="30" height="14" rx="4"/>
+      <text class="t xs" x="54" y="92">MCP / data layer</text>
+      <rect class="ext" x="14" y="102" width="30" height="14" rx="4"/>
+      <text class="t xs" x="54" y="114">external service</text>
+      <rect class="cred" x="14" y="124" width="30" height="16" rx="8"/>
+      <use href="#lk" x="22" y="124" width="14" height="14"/>
+      <text class="t xs" x="54" y="136">scoped credential</text>
+    </g>
+  </g>
+</svg>
