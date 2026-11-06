@@ -157,9 +157,7 @@ class CodingPlugin:
                 thread_ts=context.thread_ts,
             )
             return
-        notion_tools = frozenset(
-            tool.function_name for tool in self._mcp_manager.tools if tool.server_name == "notion"
-        )
+        notion_tools = _notion_source_tools(self._mcp_manager)
         if not notion_tools:
             await context.say(
                 text="The configured `notion` MCP server has no available tools.",
@@ -215,7 +213,13 @@ class CodingPlugin:
                 allowed_tool_names=notion_tools,
                 required_tool_names=notion_tools,
             )
-        except (AgentLoopError, InferenceRouterError):
+        except AgentLoopError as exc:
+            await context.say(
+                text=f"Could not complete the Notion review: {str(exc).rstrip('.')}.",
+                thread_ts=context.thread_ts,
+            )
+            return
+        except InferenceRouterError:
             await context.say(
                 text="Could not retrieve and review the Notion specification.",
                 thread_ts=context.thread_ts,
@@ -253,9 +257,7 @@ class CodingPlugin:
                 thread_ts=context.thread_ts,
             )
             return
-        notion_tools = frozenset(
-            tool.function_name for tool in self._mcp_manager.tools if tool.server_name == "notion"
-        )
+        notion_tools = _notion_source_tools(self._mcp_manager)
         if not notion_tools:
             await context.say(
                 text="The configured `notion` MCP server has no available tools.",
@@ -311,7 +313,13 @@ class CodingPlugin:
                 allowed_tool_names=notion_tools,
                 required_tool_names=notion_tools,
             )
-        except (AgentLoopError, InferenceRouterError):
+        except AgentLoopError as exc:
+            await context.say(
+                text=f"Could not prepare the Notion coding request: {str(exc).rstrip('.')}.",
+                thread_ts=context.thread_ts,
+            )
+            return
+        except InferenceRouterError:
             await context.say(
                 text="Could not retrieve a grounded specification from Notion.",
                 thread_ts=context.thread_ts,
@@ -417,6 +425,14 @@ def _notion_page_url(value: str) -> str | None:
         or hostname.endswith(".notion.site")
     )
     return candidate if valid else None
+
+
+def _notion_source_tools(manager: McpManager) -> frozenset[str]:
+    tools = tuple(tool for tool in manager.tools if tool.server_name == "notion")
+    markdown_tools = frozenset(
+        tool.function_name for tool in tools if tool.tool_name == "API-retrieve-page-markdown"
+    )
+    return markdown_tools or frozenset(tool.function_name for tool in tools)
 
 
 def _clean_specification(value: str) -> str:

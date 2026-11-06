@@ -9,6 +9,7 @@ from slack_agent_runtime.inference.client import InferenceResult, InferenceUsage
 from slack_agent_runtime.mcp.manager import McpTool
 from slack_agent_runtime.plugins.api import CommandContext, ThreadContext
 from slack_agent_runtime.plugins.coding import CodingPlugin
+from slack_agent_runtime.services.agent_runner import AgentLoopError
 
 
 def _context(prompt: str, *, user_id: str = "admin") -> CommandContext:
@@ -123,12 +124,21 @@ async def test_notion_spec_is_grounded_then_dispatched_without_persisting_conten
         InferenceUsage(),
     )
     notion_tool = McpTool(
-        "mcp__notion__fetch",
+        "mcp__notion__API_retrieve_page_markdown",
         "notion",
-        "fetch",
-        "Fetch page",
+        "API-retrieve-page-markdown",
+        "Retrieve page as Markdown",
         {},
         read_only=True,
+        auto_approved=True,
+    )
+    notion_write_tool = McpTool(
+        "mcp__notion__API_patch_page",
+        "notion",
+        "API-patch-page",
+        "Update page",
+        {},
+        read_only=False,
         auto_approved=False,
     )
     context = _context(
@@ -139,14 +149,18 @@ async def test_notion_spec_is_grounded_then_dispatched_without_persisting_conten
         policy=None,
         max_prompt_chars=1_000,
         agent_runner=runner,
-        mcp_manager=SimpleNamespace(tools=(notion_tool,)),
+        mcp_manager=SimpleNamespace(tools=(notion_write_tool, notion_tool)),
     )
 
     await _handler(plugin)(context)
 
     run_kwargs = runner.run.await_args.kwargs
-    assert run_kwargs["allowed_tool_names"] == frozenset({"mcp__notion__fetch"})
-    assert run_kwargs["required_tool_names"] == frozenset({"mcp__notion__fetch"})
+    assert run_kwargs["allowed_tool_names"] == frozenset(
+        {"mcp__notion__API_retrieve_page_markdown"}
+    )
+    assert run_kwargs["required_tool_names"] == frozenset(
+        {"mcp__notion__API_retrieve_page_markdown"}
+    )
     assert run_kwargs["messages"][1]["content"] == (
         "Notion specification URL: https://app.notion.com/p/spec-123"
     )
@@ -190,12 +204,21 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
         InferenceUsage(),
     )
     notion_tool = McpTool(
-        "mcp__notion__fetch",
+        "mcp__notion__API_retrieve_page_markdown",
         "notion",
-        "fetch",
-        "Fetch page",
+        "API-retrieve-page-markdown",
+        "Retrieve page as Markdown",
         {},
         read_only=True,
+        auto_approved=True,
+    )
+    notion_write_tool = McpTool(
+        "mcp__notion__API_patch_page",
+        "notion",
+        "API-patch-page",
+        "Update page",
+        {},
+        read_only=False,
         auto_approved=False,
     )
     context = _context(
@@ -206,14 +229,18 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
         policy=None,
         max_prompt_chars=8_000,
         agent_runner=runner,
-        mcp_manager=SimpleNamespace(tools=(notion_tool,)),
+        mcp_manager=SimpleNamespace(tools=(notion_write_tool, notion_tool)),
     )
 
     await _spec_handler(plugin)(context)
 
     run_kwargs = runner.run.await_args.kwargs
-    assert run_kwargs["allowed_tool_names"] == frozenset({"mcp__notion__fetch"})
-    assert run_kwargs["required_tool_names"] == frozenset({"mcp__notion__fetch"})
+    assert run_kwargs["allowed_tool_names"] == frozenset(
+        {"mcp__notion__API_retrieve_page_markdown"}
+    )
+    assert run_kwargs["required_tool_names"] == frozenset(
+        {"mcp__notion__API_retrieve_page_markdown"}
+    )
     assert run_kwargs["messages"][1]["content"] == (
         "Notion specification URL: https://app.notion.com/p/spec-123"
     )
@@ -224,6 +251,40 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
     assert "never invent them" in instructions
     assert context.say.await_args.kwargs["text"].startswith("*Conclusion*")
     client.dispatch.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_spec_review_reports_agent_loop_failure_reason() -> None:
+    client = AsyncMock()
+    client.allowed_repositories = frozenset({"owner/repo"})
+    runner = AsyncMock()
+    runner.run.side_effect = AgentLoopError(
+        "The agent reached its MCP step limit before producing an answer"
+    )
+    notion_tool = McpTool(
+        "mcp__notion__fetch",
+        "notion",
+        "fetch",
+        "Fetch page",
+        {},
+        read_only=True,
+        auto_approved=False,
+    )
+    context = _context("spec review from notion https://www.notion.so/spec-123")
+    plugin = CodingPlugin(
+        client,
+        policy=None,
+        max_prompt_chars=8_000,
+        agent_runner=runner,
+        mcp_manager=SimpleNamespace(tools=(notion_tool,)),
+    )
+
+    await _spec_handler(plugin)(context)
+
+    assert context.say.await_args.kwargs["text"] == (
+        "Could not complete the Notion review: "
+        "The agent reached its MCP step limit before producing an answer."
+    )
 
 
 @pytest.mark.asyncio
