@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/images/slack-agent-runtime-logo.svg" alt="Slack Agent Runtime logo: a horse in a harness whose reins lead to a terminal key" width="160">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/slack-agent-runtime-wordmark-dark.svg">
+    <img src="docs/images/slack-agent-runtime-wordmark-light.svg" alt="Slack Agent Runtime: the keyboard, not the keys. Logo of a horse in a harness whose reins lead to a terminal key." width="620">
+  </picture>
 </p>
 
 # Slack Agent Runtime
