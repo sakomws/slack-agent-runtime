@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--prompt-file", type=Path, required=True)
     parser.add_argument("--output-file", type=Path, required=True)
-    parser.add_argument("--max-steps", type=int, default=24)
+    parser.add_argument("--max-steps", type=int, default=48)
     parser.add_argument("--max-commands", type=int, default=20)
     parser.add_argument("--max-changed-files", type=int, default=50)
     parser.add_argument("--max-diff-chars", type=int, default=500_000)

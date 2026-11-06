@@ -75,6 +75,36 @@ async def test_worker_runs_tool_loop_and_returns_sanitized_metadata(tmp_path: Pa
 
 
 @pytest.mark.asyncio
+async def test_worker_warns_model_to_finalize_near_step_limit(tmp_path: Path) -> None:
+    client = AsyncMock()
+    client.complete.side_effect = [
+        _result(
+            "",
+            (
+                InferenceToolCall(
+                    "call-1",
+                    "write_file",
+                    {"path": "feature.py", "content": "VALUE = 1\n"},
+                ),
+            ),
+        ),
+        _result("Finish dependency update"),
+    ]
+
+    await CodingWorker(
+        client,
+        WorkspaceTools(_repository(tmp_path)),
+        max_steps=8,
+    ).run("Update dependencies", model="model")
+
+    messages = client.complete.await_args_list[0].kwargs["messages"]
+    assert any(
+        message["role"] == "system" and "Eight model/tool rounds remain" in message["content"]
+        for message in messages
+    )
+
+
+@pytest.mark.asyncio
 async def test_worker_rejects_unknown_tools_and_step_exhaustion(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     unknown_client = AsyncMock()

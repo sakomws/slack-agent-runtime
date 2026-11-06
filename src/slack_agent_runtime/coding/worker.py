@@ -37,7 +37,7 @@ class CodingWorker:
         inference_client: InferenceClient,
         tools: WorkspaceTools,
         *,
-        max_steps: int = 24,
+        max_steps: int = 48,
     ) -> None:
         self._client = inference_client
         self._tools = tools
@@ -57,7 +57,19 @@ class CodingWorker:
             },
             {"role": "user", "content": prompt},
         ]
-        for _ in range(self._max_steps):
+        for step in range(self._max_steps):
+            remaining_steps = self._max_steps - step
+            if remaining_steps == 8:
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": (
+                            "Eight model/tool rounds remain. Stop broad exploration, finish "
+                            "the requested edits, run the highest-value remaining validation, "
+                            "and then return the required final summary without tool calls."
+                        ),
+                    }
+                )
             result = await self._client.complete(
                 messages=messages,
                 model=model,
