@@ -5,8 +5,6 @@
   </picture>
 </p>
 
-# Slack Agent Runtime
-
 > Turn Slack threads into review-ready pull requests—without giving the AI
 > your GitHub credentials.
 
