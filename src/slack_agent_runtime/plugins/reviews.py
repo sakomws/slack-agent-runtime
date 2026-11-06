@@ -310,6 +310,8 @@ def _parse_review(words: list[str], default_model: str) -> tuple[str, int, str]:
 
 
 def _parse_pull_request_target(target: str) -> tuple[str, str]:
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1].split("|", 1)[0]
     if "://" in target:
         parsed = urlsplit(target)
         if (

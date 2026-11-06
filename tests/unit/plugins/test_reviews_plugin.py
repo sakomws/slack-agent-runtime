@@ -99,13 +99,21 @@ async def test_review_validates_model_dispatches_and_stores_pointer() -> None:
 
 
 @pytest.mark.asyncio
-async def test_review_accepts_full_github_pull_request_url() -> None:
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://github.com/sakomws/everyballwins/pull/6",
+        "<https://github.com/sakomws/everyballwins/pull/6>",
+        "<https://github.com/sakomws/everyballwins/pull/6|github.com/sakomws/everyballwins/pull/6>",
+    ],
+)
+async def test_review_accepts_full_github_pull_request_url(target: str) -> None:
     client = AsyncMock()
     client.allowed_repositories = frozenset({"sakomws/everyballwins"})
     client.pull_request.return_value = _pull_request()
     inference = AsyncMock()
     inference.list_models.return_value = ("thread-model",)
-    context = _context("review https://github.com/sakomws/everyballwins/pull/6")
+    context = _context(f"review {target}")
 
     await _route(_plugin(client, inference), "review")(context)
 
