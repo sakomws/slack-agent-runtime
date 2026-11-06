@@ -105,6 +105,36 @@ async def test_worker_warns_model_to_finalize_near_step_limit(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
+async def test_worker_forces_summary_after_tool_budget_with_valid_diff(tmp_path: Path) -> None:
+    client = AsyncMock()
+    client.complete.side_effect = [
+        _result(
+            "",
+            (
+                InferenceToolCall(
+                    "call-1",
+                    "write_file",
+                    {"path": "feature.py", "content": "VALUE = 1\n"},
+                ),
+            ),
+        ),
+        _result("Implemented the requested update."),
+    ]
+
+    result = await CodingWorker(
+        client,
+        WorkspaceTools(_repository(tmp_path)),
+        max_steps=1,
+    ).run("Update dependencies", model="model")
+
+    assert result.changed_files == ("feature.py",)
+    assert result.summary == "Implemented the requested update."
+    final_call = client.complete.await_args_list[1]
+    assert final_call.kwargs["tools"] == ()
+    assert "tool budget is exhausted" in final_call.kwargs["messages"][-1]["content"]
+
+
+@pytest.mark.asyncio
 async def test_worker_rejects_unknown_tools_and_step_exhaustion(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     unknown_client = AsyncMock()

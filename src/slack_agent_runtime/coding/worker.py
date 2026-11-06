@@ -77,18 +77,7 @@ class CodingWorker:
             )
             if not result.tool_calls:
                 changed = await self._tools.validate_diff()
-                summary = _sanitize(result.content, limit=8_000)
-                if not summary:
-                    raise CodingToolError("The coding model returned no final summary")
-                title = _pr_title(summary)
-                tests = tuple(self._tools.test_report)
-                body = _sanitize(
-                    summary
-                    + "\n\n## Validation\n"
-                    + ("\n".join(f"- {item}" for item in tests) if tests else "- Not reported"),
-                    limit=20_000,
-                )
-                return CodingWorkerResult(summary, title, body, changed, tests)
+                return self._result(result.content, changed)
             messages.append(_assistant_message(result.content, result.tool_calls))
             for call in result.tool_calls:
                 if call.name not in {
@@ -108,7 +97,38 @@ class CodingWorker:
                         "content": tool_result.content,
                     }
                 )
-        raise CodingToolError("Coding worker step limit exceeded")
+        try:
+            changed = await self._tools.validate_diff()
+        except CodingToolError as exc:
+            raise CodingToolError(
+                "Coding worker step limit exceeded before producing changes"
+            ) from exc
+        messages.append(
+            {
+                "role": "system",
+                "content": (
+                    "The tool budget is exhausted. Do not request more tools. Return only a "
+                    "concise factual summary of the changes already made and validation "
+                    "already run. Clearly identify any incomplete work."
+                ),
+            }
+        )
+        final = await self._client.complete(messages=messages, model=model, tools=())
+        return self._result(final.content, changed)
+
+    def _result(self, content: str, changed: tuple[str, ...]) -> CodingWorkerResult:
+        summary = _sanitize(content, limit=8_000)
+        if not summary:
+            raise CodingToolError("The coding model returned no final summary")
+        title = _pr_title(summary)
+        tests = tuple(self._tools.test_report)
+        body = _sanitize(
+            summary
+            + "\n\n## Validation\n"
+            + ("\n".join(f"- {item}" for item in tests) if tests else "- Not reported"),
+            limit=20_000,
+        )
+        return CodingWorkerResult(summary, title, body, changed, tests)
 
 
 def _assistant_message(
