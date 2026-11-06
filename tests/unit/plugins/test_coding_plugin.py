@@ -162,7 +162,11 @@ async def test_notion_source_requires_valid_url_and_configured_server() -> None:
     await _handler(CodingPlugin(client, policy=None, max_prompt_chars=1_000))(invalid)
     assert "valid HTTPS" in invalid.say.await_args.kwargs["text"]
 
-    missing = _context("code owner/repo from notion https://notion.so/spec")
+    lookalike = _context("code owner/repo from notion https://app.notion.com.example.com/spec")
+    await _handler(CodingPlugin(client, policy=None, max_prompt_chars=1_000))(lookalike)
+    assert "valid HTTPS" in lookalike.say.await_args.kwargs["text"]
+
+    missing = _context("code owner/repo from notion https://app.notion.com/p/spec")
     await _handler(CodingPlugin(client, policy=None, max_prompt_chars=1_000))(missing)
     assert "not configured" in missing.say.await_args.kwargs["text"]
     client.dispatch.assert_not_awaited()

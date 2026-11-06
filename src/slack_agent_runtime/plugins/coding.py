@@ -143,7 +143,9 @@ class CodingPlugin:
         page_url = words[4].strip()
         if not _valid_notion_url(page_url):
             await context.say(
-                text="Use a valid HTTPS `notion.so` or `notion.site` page URL.",
+                text=(
+                    "Use a valid HTTPS `app.notion.com`, `notion.so`, or `notion.site` page URL."
+                ),
                 thread_ts=context.thread_ts,
             )
             return
@@ -237,7 +239,9 @@ class CodingPlugin:
     ) -> None:
         if not _valid_notion_url(page_url):
             await context.say(
-                text="Use a valid HTTPS `notion.so` or `notion.site` page URL.",
+                text=(
+                    "Use a valid HTTPS `app.notion.com`, `notion.so`, or `notion.site` page URL."
+                ),
                 thread_ts=context.thread_ts,
             )
             return
@@ -401,7 +405,8 @@ def _valid_notion_url(value: str) -> bool:
     parsed = urlparse(value)
     hostname = (parsed.hostname or "").lower()
     return parsed.scheme == "https" and (
-        hostname == "notion.so"
+        hostname == "app.notion.com"
+        or hostname == "notion.so"
         or hostname.endswith(".notion.so")
         or hostname == "notion.site"
         or hostname.endswith(".notion.site")
