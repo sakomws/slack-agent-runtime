@@ -15,15 +15,15 @@ tunnel, webhook, or cloud deployment.
 
 Slack is the interaction harness. MCP provides governed access to data sources
 such as Notion specifications and Slack data. One OpenAI-compatible endpoint
-provides inference and search. GitHub Actions runs bounded coding and review
-workers, while GitHub stores code artifacts such as branches, diffs, pull
-requests, and reviews.
+provides inference and search; the current deployment uses You.com for that
+endpoint. GitHub Actions runs bounded coding and review workers, while GitHub
+stores code artifacts such as branches, diffs, pull requests, and reviews.
 
 ```mermaid
 flowchart LR
     U[Engineer] --> S[Slack interaction harness]
     S --> R[Slack Agent Runtime]
-    R --> I[OpenAI-compatible inference and search endpoint]
+    R --> I[You.com OpenAI-compatible inference-and-search endpoint]
     R --> T[(Thread state)]
     R --> M[MCP approval broker and data layer]
     M --> N[Notion specifications]

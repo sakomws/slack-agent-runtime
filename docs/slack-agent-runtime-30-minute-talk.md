@@ -5,10 +5,10 @@
 
 This talk recommends a five-part engineering architecture: Slack as the
 interaction harness, Model Context Protocol (MCP) as the data layer, You.com as
-one inference-and-search endpoint, GitHub Actions as the bounded execution
-sandbox, and GitHub as the code-artifact layer. It is written for software
-engineers and platform teams, and its purpose is to explain that architecture
-and its trust boundaries in 30 minutes.
+one OpenAI-compatible inference-and-search endpoint, GitHub Actions as the
+bounded execution sandbox, and GitHub as the code-artifact layer. It is written
+for software engineers and platform teams, and its purpose is to explain that
+architecture and its trust boundaries in 30 minutes.
 
 ## Presenter preparation: evidence and scope
 
@@ -29,7 +29,7 @@ The talk focuses on trust boundaries and operational behavior rather than a
 line-by-line code tour. It uses two diagrams only where sequence and credential
 separation are easier to understand visually.
 
-The repository accepts any compatible OpenAI-style endpoint. This talk uses
+The repository accepts any OpenAI-compatible endpoint. This talk uses
 You.com when describing the current deployment because the repository owner
 identified it as the single endpoint for inference and search; that provider is
 not a requirement of the reusable runtime.
@@ -68,7 +68,7 @@ Optional Q&A is outside the 30-minute talk.
 
 - **Slack:** interaction harness
 - **MCP:** data layer for Notion specifications and Slack data
-- **You.com:** one endpoint for inference and search
+- **You.com:** one OpenAI-compatible endpoint for inference and search
 - **GitHub Actions:** bounded execution sandbox
 - **GitHub code-artifact layer:** repositories, branches, diffs, reviews, and
   pull requests
@@ -84,8 +84,8 @@ configured Slack MCP server can expose Slack data to model workflows. Slack
 therefore has two roles: the human interaction harness and, through MCP, an
 optional governed data source.
 
-You.com is the current deployment's single endpoint for inference and search.
-The runtime itself depends only on the endpoint's OpenAI-compatible interface.
+You.com is the current deployment's single OpenAI-compatible endpoint for
+inference and search. The reusable runtime remains provider-neutral.
 
 GitHub Actions runs bounded workers. GitHub stores the resulting code artifacts:
 commits, branches, diffs, reviews, and pull requests. Human merge approval and
@@ -172,7 +172,7 @@ tracks the durable GitHub Actions run.
 flowchart LR
     U[Engineer] --> S[Slack interaction harness]
     S --> R[Slack Agent Runtime]
-    R --> Y[You.com inference and search endpoint]
+    R --> Y[You.com OpenAI-compatible inference-and-search endpoint]
     R --> P[(Thread state)]
     R --> A[MCP approval broker and data layer]
     A --> N[Notion specifications]
