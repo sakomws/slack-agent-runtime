@@ -89,6 +89,10 @@ async def test_auto_approved_tool_runs_without_approval_and_aggregates_usage() -
         "mcp__server__lookup",
         {"q": "answer"},
     )
+    first_messages = client.complete.await_args_list[0].kwargs["messages"]
+    assert first_messages[0]["role"] == "system"
+    assert "include the canonical URLs" in first_messages[0]["content"]
+    assert first_messages[1] == {"role": "user", "content": "question"}
     second_messages = client.complete.await_args_list[1].kwargs["messages"]
     assert second_messages[-2]["tool_calls"][0]["function"]["arguments"] == '{"q":"answer"}'
     assert second_messages[-1] == {
