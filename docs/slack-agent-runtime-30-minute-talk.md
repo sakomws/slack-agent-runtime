@@ -74,6 +74,11 @@ Optional Q&A is outside the 30-minute talk.
 - **GitHub code-artifact layer:** repositories, branches, diffs, reviews, and
   pull requests
 
+![Slack Engineering Agent Architecture](images/slack-engineering-agent-architecture.jpg)
+
+The pictured MCP sources are representative; Linear work items are also
+available through the governed MCP data layer.
+
 ### Speaker notes
 
 Slack is the harness: it provides the user, channel, thread, approval, and

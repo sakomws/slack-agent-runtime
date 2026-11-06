@@ -20,6 +20,11 @@ uses You.com for that endpoint. GitHub Actions runs bounded coding and review
 workers, while GitHub stores code artifacts such as branches, diffs, pull
 requests, and reviews.
 
+![Slack Engineering Agent Architecture](docs/images/slack-engineering-agent-architecture.jpg)
+
+_The pictured MCP sources are representative; the runtime also supports Linear
+work items through the governed MCP data layer._
+
 ```mermaid
 flowchart LR
     U[Engineer] --> S[Slack interaction harness]
