@@ -146,20 +146,32 @@ Socket Mode distributes events across all active connections for the same app.
 - `settings` — show current thread settings
 - `settings default` — reset settings while preserving history
 - `usage [on|off]` — show request and token details
+- `help` — show commands
+
+### MCP tools
+
 - `tools` — list available MCP tools and their approval behavior
 - `mcp status` — show MCP connection and tool counts
 - `mcp servers` — list connected MCP servers
+
+### Coding jobs
+
 - `code owner/repository <request>` — start an allowlisted GitHub coding job
 - `code owner/repository from notion <page URL>` — retrieve a grounded Notion
   specification through MCP, then start a coding job
 - `code status` — show the latest coding job's durable Actions status
+
+### Specification review
+
 - `spec review from notion <page URL>` — review and rewrite a grounded Notion
   specification for clarity, completeness, ownership, and next steps
+
+### Pull requests
+
 - `prs owner/repository [open|closed|all|draft] [page N]` — list pull requests
   with review buttons
 - `review owner/repository#number [model MODEL]` — run an independent PR review
 - `review status` — show the latest review workflow status
-- `help` — show commands
 
 All settings are scoped per thread. `default` removes an override.
 Anyone may inspect settings and available models. Changing the model, web
