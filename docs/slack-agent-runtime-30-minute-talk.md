@@ -1,563 +1,252 @@
-# Slack Agent Runtime: From Conversation to Reviewed Pull Request
+# Give the Bot the Keyboard, Not the Keys
 
-> Turn Slack threads into review-ready pull requests—without giving the AI
-> your GitHub credentials.
+> **Slack Agent Runtime:** from a Slack thread to a reviewed pull request, and
+> the AI never holds a GitHub or Slack token.
 
-This talk recommends a five-part engineering architecture: Slack as the
-interaction harness, Model Context Protocol (MCP) as the data layer, You.com as
-one OpenAI-compatible inference-and-search endpoint, GitHub Actions as the
-bounded execution sandbox, and GitHub as the code-artifact layer. It is written
-for software engineers and platform teams, and its purpose is to explain that
-architecture and its trust boundaries in 30 minutes.
+A 30-minute talk for software engineers and platform teams. One idea carries
+it: **the agent gets to type, it never gets to publish.** Slack is the harness,
+MCP is the data layer, one OpenAI-compatible endpoint (You.com in the current
+deployment) does inference and search, GitHub Actions is the bounded sandbox,
+and GitHub holds the artifacts. Everything else is how we keep the keys away
+from the model.
 
-## Presenter preparation: evidence and scope
+## Run of show
 
-This section is not part of the timed talk.
+| # | Slide | Time |
+| ---: | --- | ---: |
+| 1 | Give the bot the keyboard. Not the keys. | 0.5 min |
+| 2 | Friday, 4:52 pm | 1.5 min |
+| 3 | Chat is easy. Acting is where it bites. | 2 min |
+| 4 | Five layers. One job each. | 2 min |
+| 5 | Follow one request through the system | 3 min |
+| 6 | The model never holds the keys. | 2 min |
+| 7 | Bounded means finite, not instant. | 2 min |
+| 8 | Off-limits while it works. Checked after it’s gone. | 2 min |
+| 9 | Read-only is earned, not assumed. | 2.5 min |
+| 10 | Missing facts stay missing. | 1.5 min |
+| 11 | The model finds. The code decides. | 2.5 min |
+| 12 | A restart can lose a chat. Not a job. | 2 min |
+| 13 | Live demo: five commands, one thread | 2 min |
+| 14 | Three ideas worth stealing | 1 min |
+| 15 | Before you ship it | 0.5 min |
+| 16 | Keyboard: yes. Keys: never. | 0.5 min |
+| | Buffer for demo slippage | 2.5 min |
+| | **Total** | **30 min** |
 
-### Verified facts
-
-Architecture, commands, and security claims come from the repository files
-linked under [Repository references](#repository-references). The configurable
-defaults are 48 model/tool rounds
-([worker.py](../src/slack_agent_runtime/coding/worker.py)), plus 20 commands,
-50 changed files, a 500,000-character diff limit, and a 30-minute worker timeout
-([coding_worker.py](../src/slack_agent_runtime/entrypoints/coding_worker.py)).
-
-### Presentation decisions
-
-The talk focuses on trust boundaries and operational behavior rather than a
-line-by-line code tour. It uses two diagrams only where sequence and credential
-separation are easier to understand visually.
-
-The repository accepts any OpenAI-compatible endpoint. This talk uses
-You.com when describing the current deployment because the repository owner
-identified it as the single endpoint for inference and search; that provider is
-not a requirement of the reusable runtime.
-
-### Assumptions
-
-Attendees understand Slack, GitHub pull requests, and HTTP APIs.
-
-### Open questions
-
-The adopting team still needs to assign production owners, rollout dates,
-approved repositories, approved MCP servers, and incident-response procedures.
-This talk does not invent those organization-specific details.
-
-## Talk plan
-
-| Section | Time |
-| --- | ---: |
-| Why this exists | 5 minutes |
-| Runtime architecture and interaction model | 7 minutes |
-| MCP and specification workflows | 4 minutes |
-| Coding and review trust boundaries | 8.5 minutes |
-| State, operations, and demo | 4.5 minutes |
-| Closing | 1 minute |
-| **Total** | **30 minutes** |
-
-Optional Q&A is outside the 30-minute talk.
+Q&A runs after the 30 minutes.
 
 ---
 
-## Slide 1 — The five-part engineering harness
+## 1 · Give the bot the keyboard. Not the keys.
 
-**Time:** 1 minute
+**On screen:** the title, the one-line promise, the repo URL.
 
-### On slide
+Let the title sit for a beat. The whole talk is that line: the agent can write
+code, it can never publish it. The rest is how we enforce that.
 
-- **Slack:** interaction harness
-- **MCP:** data layer for Notion specifications, Linear work items, and Slack
-  data
-- **You.com:** one OpenAI-compatible endpoint for inference and search
-- **GitHub Actions:** bounded execution sandbox
-- **GitHub code-artifact layer:** repositories, branches, diffs, reviews, and
-  pull requests
+---
+
+## 2 · Friday, 4:52 pm
+
+**On screen:** a Slack thread.
+
+```text
+you    code sakomws/everyballwins Add validation for ball creation
+agent  Job queued in GitHub Actions… done. Pull request opened on a fresh
+       agent/ branch, ready for your review.
+```
+
+> The model wrote the change. **It never saw a GitHub token.**
+
+Open with the experience, not the architecture. One line in a thread comes back
+as a pull request a human reviews. Then the twist: the AI that wrote the code
+never held the credential that published it. The next 28 minutes are how.
+
+---
+
+## 3 · Chat is easy. Acting is where it bites.
+
+**On screen:** four cards.
+
+- **Threads are concurrent:** channels, threads, users, cancels and retries,
+  all at once.
+- **Tools aren’t harmless:** an MCP server runs with your runtime’s permissions.
+- **Jobs outlive processes:** a coding run takes minutes and must survive a bot
+  restart.
+- **Models leak what they hold:** any credential in the model’s process is one
+  prompt injection away.
+
+A bot that forwards prompts to a model is a weekend project. The moment it
+acts, all four bite. Tool names, arguments, output size, timeouts and approvals
+need policy. Long jobs belong in a durable job system, not an in-memory task.
+And anything the model’s process can read, a malicious diff or page can try to
+make it leak.
+
+---
+
+## 4 · Five layers. One job each.
+
+| Layer | Job | What it means here |
+| --- | --- | --- |
+| **Slack** | The harness | Who asked, where, and who approves |
+| **MCP** | The data layer | Notion specs, Linear work items, Slack data |
+| **You.com** | The brain | One OpenAI-compatible endpoint for inference and search |
+| **GitHub Actions** | The sandbox | Bounded, durable workers |
+| **GitHub** | The artifacts | Branches, diffs, PRs, reviews |
+
+Slack arrives over outbound Socket Mode, so there is no public webhook. The
+reusable runtime is provider-neutral; You.com is simply this deployment’s single
+endpoint. Human merge approval and branch protection stay the final control.
+
+---
+
+## 5 · Follow one request through the system
 
 ![Slack Engineering Agent Architecture](images/slack-engineering-agent-architecture.svg)
 
-The pictured MCP sources are representative; Linear work items are also
-available through the governed MCP data layer.
+Walk three paths.
 
-### Speaker notes
+- **Conversation:** Slack event over Socket Mode → bounded thread history →
+  the endpoint’s OpenAI-compatible API → throttled progress edits → only the
+  final answer is stored.
+- **Data:** MCP runs inside the runtime, because that is where approvals and
+  source credentials live. MCP is not a sandbox; install only trusted servers.
+- **Code:** `repository_dispatch` leaves the runtime and starts a workflow.
+  Actions becomes the durable source of job status.
 
-Slack is the harness: it provides the user, channel, thread, approval, and
-notification context for every workflow. Socket Mode is Slack's outbound
-WebSocket connection for delivering events without a public inbound webhook.
-
-MCP is the data layer. Notion is where specification documents live, while a
-configured Linear MCP server exposes work items and a configured Slack MCP
-server can expose Slack data to model workflows. Slack therefore has two roles:
-the human interaction harness and, through MCP, an optional governed data
-source.
-
-You.com is the current deployment's single OpenAI-compatible endpoint for
-inference and search. The reusable runtime remains provider-neutral.
-
-GitHub Actions runs bounded workers. GitHub stores the resulting code artifacts:
-commits, branches, diffs, reviews, and pull requests. Human merge approval and
-branch protection remain the final controls.
+Point at the yellow pills: they are the only places credentials appear, and
+the GitHub and Slack ones sit *after* the worker exits.
 
 ---
 
-## Slide 2 — The problem: chat is easy; safe action is hard
+## 6 · The model never holds the keys.
 
-**Time:** 2 minutes
+**On screen:** the rule, then four steps.
 
-### On slide
+1. **Worker runs** with an inference endpoint, key and model. Nothing else.
+2. **Worker exits.** Its process is gone before any token appears.
+3. **Diff is checked** in plain code: paths, metadata, secrets.
+4. **Keys appear:** GitHub, then Slack, each in its own later step.
 
-- Conversation state must survive real Slack threads
-- Tools need discovery, limits, and approval
-- Coding needs durable execution outside the bot process
-- Reviews must be grounded in an immutable diff
-- Credentials must not flow through untrusted model steps
+The target repo is checked out without persisted credentials. “Later step”
+means a separate GitHub Actions step that starts after the AI worker process
+has finished, not a later tool call in the same process.
 
-### Speaker notes
-
-A basic Slack bot can forward a prompt to a model and post the response. That
-stops being sufficient as soon as the bot takes action.
-
-First, Slack is concurrent and threaded. The runtime must distinguish channels,
-threads, users, active requests, cancellation, and message history.
-
-Second, tools are not harmless function calls. An MCP server runs with the
-runtime's permissions. Tool names, arguments, output size, timeouts, and
-approvals therefore need policy.
-
-Third, a coding request can take minutes and must survive a Slack process
-restart. GitHub Actions is a better durable execution system than an in-memory
-task.
-
-Finally, review and coding workflows touch repositories. The design must keep
-inference credentials separate from GitHub and Slack credentials, verify exact
-commit SHAs, protect sensitive paths, and require a person to merge.
+> A prompt injection can make the model say anything. It can’t make it leak a
+> token it never had.
 
 ---
 
-## Slide 3 — What the harness coordinates
+## 7 · Bounded means finite, not instant.
 
-**Time:** 2 minutes
+| 48 | 20 | 50 | 500K | 30 |
+| :---: | :---: | :---: | :---: | :---: |
+| model/tool rounds | commands | changed files | diff characters | minute timeout |
 
-### On slide
+All configurable defaults
+([worker.py](../src/slack_agent_runtime/coding/worker.py),
+[coding_worker.py](../src/slack_agent_runtime/entrypoints/coding_worker.py)).
+Rounds are sequential and tests can take minutes, so bounded never means fast;
+it means the worst case has a ceiling.
 
-- Streaming multi-turn Slack conversations
-- Per-thread model and generation settings
-- MCP discovery, approvals, and bounded execution
-- Notion-grounded specification review
-- Slack-to-GitHub coding jobs
-- Pull-request listing and AI-assisted reviews
-- Memory, SQLite, Redis, or PostgreSQL thread state
-
-### Speaker notes
-
-The runtime exposes one coherent Slack experience, but the implementation is
-modular.
-
-Conversation commands cover model selection, web search, streaming,
-temperature, token limits, reasoning effort, cancellation, regeneration, and
-history management. Settings are scoped to a Slack thread.
-
-MCP commands show connected servers and available tools. Tool execution can
-require an administrator's Slack approval.
-
-The coding plugin dispatches jobs only to an exact repository allowlist.
-Specifications can be retrieved from Notion through MCP before coding, or
-reviewed independently for clarity and completeness.
-
-The pull-request plugin lists PRs, offers review buttons, selects a model, and
-tracks the durable GitHub Actions run.
+Near the end of its budget the model is told to wrap up. If it still runs out,
+the runtime checks for a valid diff: none is a failure; a valid one switches
+tools off and asks for one factual summary that calls out unfinished work.
 
 ---
 
-## Slide 4 — Five layers, separate trust zones
+## 8 · Off-limits while it works. Checked after it’s gone.
 
-**Time:** 3 minutes
+| The worker can’t touch | The workflow rejects |
+| --- | --- |
+| `.git` and `.github/workflows` | Changes to protected paths |
+| Environment files and secret folders | An empty diff |
+| Private keys | Secret-looking worker metadata |
+| A shell: commands are argument arrays from an allowlist | Anything else: it’s a PR, and a human merges it |
 
-### On slide
+The branch is named `agent/` plus the job ID, and generated PRs are never
+auto-merged.
 
-```mermaid
-flowchart LR
-    U[Engineer] --> S[Slack interaction harness]
-    S --> R[Slack Agent Runtime]
-    R --> Y[You.com OpenAI-compatible inference-and-search endpoint]
-    R --> P[(Thread state)]
-    R --> A[MCP approval broker and data layer]
-    A --> N[Notion specifications]
-    A --> L[Linear work items]
-    A --> SD[Slack data]
-    R -->|repository_dispatch| GA[GitHub Actions sandbox]
-    GA -->|inference credentials only| W[Bounded coding or review worker]
-    W -->|validated output| GA
-    GA -->|GitHub credential in later step| GH[GitHub code artifacts]
-    GA -->|Slack credential in later step| S
+**Say the caveat out loud:** this contains the agent; it does not make hostile
+repository code safe to run. Allowed tests execute repository code, so use it
+on trusted repositories.
+
+---
+
+## 9 · Read-only is earned, not assumed.
+
+> **Operator allowlisted the tool** + **server marks it `readOnlyHint`** =
+> **runs automatically.**
+>
+> Anything else, including missing metadata: a Slack admin approves the call
+> while it waits.
+
+The runtime connects straight to configured MCP servers over stdio or
+Streamable HTTP; no gateway. Tool names are namespaced per server; rounds,
+timeouts and output size are capped; arguments and results are never logged.
+
+Approval waits live in memory, which is why the docs say one active runtime
+replica when approvals are on. And MCP servers are trusted code, not a sandbox.
+
+---
+
+## 10 · Missing facts stay missing.
+
+```text
+spec review from notion <page URL>
 ```
 
-### Speaker notes
+- Only the Notion MCP server’s tools
+- At least one successful source call
+- Facts, assumptions, decisions and open questions kept apart
+- No owner or deadline? It’s an open question, never a guess
 
-There are three main paths.
-
-The conversation path stays inside the Slack harness. Slack delivers events
-over outbound Socket Mode. The runtime normalizes a message, loads bounded
-thread history, calls the You.com inference-and-search endpoint through its
-OpenAI-compatible API, throttles progress updates, and stores only final
-assistant content.
-
-The MCP data path also runs inside the runtime because that is where approvals
-and source credentials live. Notion supplies specification documents, Linear
-supplies work items, and Slack can supply governed workspace data when its MCP
-server is configured. MCP is not a sandbox; only trusted servers should be
-installed.
-
-The GitHub path leaves the runtime through `repository_dispatch`, a custom
-GitHub event that starts a repository workflow. GitHub Actions becomes the
-durable source of job status and the bounded execution sandbox. Here,
-“sandbox” means an isolated runner with limited tools, time, paths, and
-credentials; it does not mean hostile repository code is safe to execute. The
-model-facing worker receives inference credentials but no GitHub or Slack
-credential. Commit, push, review publication, and Slack notification happen
-only after the worker exits.
-
-GitHub is the code-artifact layer. It stores commits, generated branches,
-diffs, pull requests, review evidence, and workflow history.
+Specs are retrieved before any code is dispatched, and Notion credentials stay
+in the Slack runtime; they never enter GitHub Actions. The review returns a
+revised spec and does not start a coding job; that is a separate,
+Notion-backed command.
 
 ---
 
-## Slide 5 — A Slack-native interaction model
+## 11 · The model finds. The code decides.
 
-**Time:** 2 minutes
+1. Pin the PR’s head commit SHA.
+2. Treat every title, body, comment and diff as untrusted.
+3. The model returns strict JSON findings.
+4. Recheck the SHA and required checks, then publish.
 
-### On slide
+| Findings | Verdict, set in code |
+| --- | --- |
+| Critical or high | Request changes |
+| Medium, low or none | Approve, if policy allows |
+| Draft, failing checks, or the PR author’s own token | Comment only |
 
-- Direct messages and `@app` mentions
-- One conversation and settings scope per thread
-- Streaming preview, then final chunked response
-- Buttons for cancel, regenerate, model, feedback, and review
-- Text commands remain the accessible fallback
-
-### Speaker notes
-
-The runtime treats the Slack thread as the unit of interaction. A follow-up in
-the same thread shares bounded history and settings. A different thread is a
-different conversation.
-
-During generation, one progress message is edited at a configurable minimum
-interval. This avoids flooding Slack while still showing activity. Only the
-final response enters conversation history and feedback records.
-
-Interactive controls make common operations discoverable, and common controls
-also have text-command equivalents. That matters for accessibility, automation,
-and recovery when a Slack modal or button payload is unavailable.
-
-Only one request runs per thread. Active requests, cancellation handles, and
-locks are process-local even when thread history uses a durable backend.
+**And it never merges.** The runtime sanitizes the findings and computes the
+blocking flag itself; the model never chooses the GitHub event. Findings render
+as stacked sections (severity, location, issue, recommendation), not a cramped
+table.
 
 ---
 
-## Slide 6 — Plugins keep the core small
+## 12 · A restart can lose a chat. Not a job.
 
-**Time:** 2 minutes
+| Survives a restart | Lost on purpose |
+| --- | --- |
+| Thread snapshots in SQLite, Redis or PostgreSQL | Active requests and cancellations |
+| History rebuilt from Slack replies | Locks, rate limits, token budgets |
+| Coding and review status in GitHub Actions | Pending MCP approvals |
 
-### On slide
+So: **one active Socket Mode runtime per Slack app.** Socket Mode spreads
+events across connections, so replicas aren’t stateless HTTP replicas.
 
-- Typed command, action, view, event, and reaction routes
-- Explicit plugin loading; no automatic entry-point execution
-- Route-conflict validation at startup
-- Namespaced, JSON-compatible plugin state
-- Failure isolation and lifecycle hooks
-
-### Speaker notes
-
-The plugin registry is the extension surface. A plugin declares routes, help
-entries, startup behavior, shutdown behavior, and optionally namespaced state.
-
-The registry rejects duplicate plugin names and route conflicts. Installed
-plugins are treated as trusted code, so entry points—installed packages'
-plugin-registration hooks—are allowlisted and never auto-loaded merely because
-a package is installed.
-
-The bundled MCP, coding, and review capabilities use the same plugin contracts
-as external extensions. That keeps Slack payload parsing and conversation
-coordination separate from feature-specific behavior.
-
-The practical benefit is that a team can add a workflow without branching the
-core completion runner or teaching every service about a new command.
+Deploy locally, with Docker Compose, or on Kubernetes with Helm. Telemetry uses
+standard OTLP settings and records model, duration, usage and error type, never
+prompts, completions or MCP payloads. Cost estimates are opt-in, from a pricing
+map you supply.
 
 ---
 
-## Slide 7 — MCP data layer: governed access to Notion and Slack
-
-**Time:** 2.5 minutes
-
-### On slide
-
-- Direct standard input/output (stdio) or Streamable HTTP connections
-- Model-facing names are namespaced
-- Tool calls have round, timeout, and output-size limits
-- Automatic execution requires:
-  - operator allowlist
-  - tool `readOnlyHint` annotation
-- Unknown or write-capable tools require an administrator
-
-### Speaker notes
-
-MCP provides tool discovery and invocation for the data layer. In this
-deployment, Notion supplies specification documents, Linear supplies work
-items, and Slack can supply workspace data. The runtime connects directly to
-configured servers; it does not require a separate gateway.
-
-Every discovered tool receives a namespaced model-facing name so the registry
-can prevent or detect cross-server naming collisions. Arguments and results are
-deliberately not logged or persisted. Results are truncated before returning
-to the model.
-
-Automatic execution has two independent requirements. The operator must
-explicitly allowlist the tool, and the MCP server must mark it read-only.
-Missing metadata is not interpreted optimistically. Unknown and write-capable
-tools require a Slack administrator to approve the in-flight call.
-
-Approval futures remain process-local. For that reason, the documented
-deployment model uses one active runtime replica when approvals are enabled.
-
----
-
-## Slide 8 — Grounded specification review
-
-**Time:** 1.5 minutes
-
-### On slide
-
-Run `spec review from notion` followed by a Notion page URL readable by the
-configured Notion integration.
-
-- Restricts the agent to tools from the `notion` MCP server
-- Requires at least one successful source call
-- Separates facts, assumptions, decisions, and open questions
-- Flags missing owners and deadlines without inventing them
-- Returns a revised specification; does not start a coding job
-
-### Speaker notes
-
-Specifications are external source material, so the runtime retrieves them
-before dispatching code. Notion credentials remain inside the Slack runtime and
-never enter GitHub Actions.
-
-The standalone review command applies an editorial checklist: lead with the
-conclusion, define audience and purpose, use concrete language, verify claims
-against the source, keep terminology consistent, and identify confusing
-sections.
-
-The critical grounding rule is that missing facts stay missing. A missing owner
-or deadline becomes an open question, not a plausible invention.
-
-Teams can then use the Notion-backed coding command to normalize grounded
-requirements and dispatch a separate coding job.
-
----
-
-## Slide 9 — GitHub Actions: the bounded execution sandbox
-
-**Time:** 4 minutes
-
-### On slide
-
-```mermaid
-sequenceDiagram
-    actor Admin as Slack administrator
-    participant Bot as Slack runtime
-    participant Actions as GitHub Actions
-    participant Worker as Bounded worker
-    participant GitHub
-
-    Admin->>Bot: code sakomws/everyballwins request
-    Bot->>Actions: repository_dispatch
-    Actions->>Worker: checkout + prompt + inference credentials
-    Note over Worker: No GitHub or Slack token
-    Worker-->>Actions: validated diff + PR metadata
-    Actions->>GitHub: commit, push, open PR
-    Actions-->>Admin: post PR link in Slack thread
-```
-
-### Speaker notes
-
-The Slack harness first checks that the user is an administrator and that the
-exact repository name, such as `sakomws/everyballwins`, is allowlisted. GitHub
-accepts the dispatch, and a repository-local Actions workflow invokes the
-reusable workflow from this runtime.
-Production consumers should pin that reference to a release or immutable
-commit SHA.
-
-The target repository is checked out without persisted credentials. The worker
-receives only three inference values: endpoint, API key, and model. It cannot
-see the GitHub token or Slack token.
-
-In this talk, “later step” means a separate GitHub Actions step that starts
-after the untrusted AI worker process has finished. It is not a later tool call
-inside the same model process.
-
-After the worker exits, the workflow validates changed paths and metadata. It
-rejects workflow files, environment files, secret directories, private-key
-formats, an empty diff, or suspicious secret-like worker metadata.
-
-Only then does a later step receive the GitHub token and publish code artifacts:
-an isolated branch whose name starts with `agent/` and ends with the generated
-job ID, a commit, a diff, and a pull request. A separate Slack action reports
-the result through the interaction harness.
-
-Generated PRs are never auto-merged. Human review is part of the design, not an
-optional operational convention.
-
----
-
-## Slide 10 — What “bounded worker” means
-
-**Time:** 2 minutes
-
-### On slide
-
-- Paths confined to the checkout
-- Protected files blocked
-- Shell-free executable allowlist
-- 48 model/tool rounds
-- 20 commands, 50 changed files
-- 500,000-character diff limit
-- 30-minute worker timeout
-- Forced factual finalization when a valid diff exists
-
-### Speaker notes
-
-“Bounded” does not mean instant. It means the worker has explicit limits.
-Model/tool rounds are sequential, and dependency resolution or tests may take
-minutes.
-
-The worker can list, search, read, write, delete, and run approved commands. It
-cannot modify `.git`, `.github/workflows`, environment files, secret paths, or
-private keys. Commands are argument arrays rather than shell strings.
-
-Near the end of its budget, the model receives a finalization warning. If it
-still exhausts the tool budget, the runtime checks for a valid diff. No changes
-means failure. A valid diff causes tools to be disabled and one final factual
-summary to be requested, with incomplete work called out explicitly.
-
-This execution sandbox provides containment, not proof that generated code or
-target repository code is safe. Allowed tests can execute repository code, so
-the workflow belongs only in trusted repositories.
-
----
-
-## Slide 11 — Pull-request review: model findings, deterministic verdict
-
-**Time:** 2.5 minutes
-
-### On slide
-
-- Fetch title, body, and diff for an expected head SHA
-- Treat all PR content as untrusted
-- Require strict structured findings
-- Derive verdict in code:
-  - critical/high → request changes
-  - medium/low/none → approve when policy allows
-- Recheck SHA and required checks before publication
-- Never merge
-
-### Speaker notes
-
-The review workflow is intentionally separate from the coding worker.
-
-At dispatch time, the Slack runtime records the PR's current head SHA—the commit
-identifier at the tip of the PR branch. GitHub Actions fetches the PR and diff
-and verifies that SHA before inference. The prompt tells the reviewer to ignore
-instructions embedded in titles, bodies, comments, code, and diffs.
-
-The model must return a strict JSON shape with a summary and bounded findings.
-The runtime sanitizes fields and computes the blocking flag itself. The model
-does not directly choose the GitHub event.
-
-Before publication, a credentialed step verifies that the PR is still open and
-still points to the same SHA. Approval is downgraded to a comment for drafts,
-missing or failing required checks, or a reviewer token owned by the PR author.
-
-The rendered review uses vertical finding sections—severity, location, issue,
-and recommendation—rather than a cramped Markdown table.
-
----
-
-## Slide 12 — Durable state versus process-local coordination
-
-**Time:** 1 minute
-
-### On slide
-
-**Durable or recoverable**
-
-- Thread snapshots: SQLite, Redis, PostgreSQL
-- Bounded history hydration from Slack
-- Coding/review status from GitHub Actions
-
-**Intentionally process-local**
-
-- Memory-backed thread snapshots
-- Active requests and cancellation
-- Locks and concurrency counters
-- Rate limits and token budgets
-- Pending MCP approval waits
-
-### Speaker notes
-
-The repository is explicit about what durability means.
-
-Thread history and settings can use external storage. Snapshots are versioned
-and validated. On a cache miss, history hydration rebuilds a bounded
-conversation from Slack replies when the runtime has permission to read that
-thread.
-
-Coding and review jobs are different: GitHub Actions is their durable source of
-truth. Slack plugin state stores only a pointer—the latest job ID, repository,
-and queue time.
-
-Active execution controls remain process-local. Pending MCP approvals wait in
-memory for an administrator's allow or deny action. A restart can lose an
-in-flight chat completion or approval, but it does not lose an
-already-dispatched GitHub job.
-
----
-
-## Slide 13 — Production and observability
-
-**Time:** 1.5 minutes
-
-### On slide
-
-- Local, Docker Compose, or Kubernetes with Helm
-- One active Socket Mode runtime per Slack app
-- Standard OpenTelemetry Protocol (OTLP) configuration
-- Redacting structured logs
-- No prompts, completions, MCP arguments, or MCP results in telemetry
-- Optional typed model-pricing map; no embedded vendor prices
-
-### Speaker notes
-
-The repository supports local installation, container builds, Compose, and a
-Helm chart. Helm is a package manager for Kubernetes deployments.
-
-Socket Mode distributes events among active connections, so multiple replicas
-do not behave like conventional stateless HTTP replicas. Process-local locks,
-approvals, and rate limits reinforce the single-active-runtime guidance.
-
-Observability uses standard OTLP environment variables and is safe when no
-exporter is configured. Telemetry records operational metadata such as model,
-duration, usage, and error type, but excludes prompts, messages, completions,
-MCP arguments, and MCP results.
-
-Cost estimation is opt-in and uses only an operator-supplied typed JSON pricing
-map. The runtime does not infer or embed vendor pricing.
-
----
-
-## Slide 14 — Two-minute demo
-
-**Time:** 2 minutes
-
-### On slide
+## 13 · Live demo: five commands, one thread
 
 ```text
 help
@@ -567,74 +256,69 @@ code sakomws/everyballwins Add validation for ball creation
 code status
 ```
 
-### Demo script
+Recheck these repositories and the PR right before presenting.
 
-The repositories and PR below are verified demo resources. Recheck their
-availability immediately before presenting.
+1. `help`: point out the MCP, coding, spec and PR categories.
+2. `prs`: bounded listing with review buttons.
+3. Show an existing generated review with stacked findings.
+4. Run the narrow coding request, then `code status`.
+5. Open the Actions run and find the handoff: uncredentialed worker first,
+   then the GitHub and Slack steps.
 
-1. Run `help` and point out the separate MCP, coding, specification, and
-   pull-request categories.
-2. Run `prs sakomws/goup.vc` to show bounded PR listing and review buttons.
-3. Show an existing generated review with vertically stacked findings.
-4. Run a narrow coding request, then immediately run `code status`.
-5. Open the Actions link and identify the trust transition:
-   uncredentialed worker first, credentialed GitHub and Slack steps later.
-
-### Speaker notes
-
-Keep the live request narrow so the demo demonstrates orchestration rather than
-waiting on a broad dependency upgrade.
-
-If GitHub Actions is slow, use an existing completed run. The important points
-are the immutable runtime pin, the separate credential scopes, protected-path
-verification, generated branch, and human-reviewed PR.
-
-If Notion MCP is configured and a verified accessible page is available, show
-the specification-review command. Do not use a fabricated page URL.
+If Actions is slow, switch to a completed run. Show `spec review` only if a
+real, accessible Notion page is ready; never a made-up URL.
 
 ---
 
-## Slide 15 — Takeaways
+## 14 · Three ideas worth stealing
 
-**Time:** 1 minute
+1. Slack is an engineering harness, not just a chat window.
+2. Keep the thinking away from the keys that publish.
+3. Data to MCP. Execution to Actions. Artifacts to GitHub.
 
-### On slide
-
-1. Slack can be an engineering harness, not just a chat surface.
-2. Separate model execution from credentials that publish side effects.
-3. Give data access to MCP, execution to Actions, and code artifacts to GitHub.
-
-### Speaker notes
-
-The repository's core lesson is architectural: useful agent workflows become
-safer and easier to operate when conversation, tools, durable jobs, and
-credentialed publication are separate stages with explicit contracts.
-
-Before production use, assign these recommended actions:
-
-- **Program sponsor — before scheduling rollout:** replace role labels below
-  with named people and calendar dates.
-- **Platform owner — before rollout:** pin reusable workflows to an immutable
-  release or commit and verify repository Actions permissions.
-- **Repository owner — before enablement:** configure branch protection,
-  encrypted secrets, and the exact repository allowlist.
-- **Security owner — before MCP activation:** approve each MCP server, automatic
-  read-only tool allowlist, and command executable allowlist.
-- **Operations owner — before launch:** define monitoring, credential rotation,
-  rollback, and incident-response procedures.
-- **Presenter — one business day before the talk:** verify Slack, model,
-  repository, and Actions access; record a completed-run fallback.
+If people remember one thing, it is number two.
 
 ---
 
-## Optional Q&A prompts
+## 15 · Before you ship it
 
-- Why use GitHub Actions instead of running coding tasks in the Slack process?
-- Which state is durable, and what is intentionally process-local?
-- What prevents a malicious diff from instructing the reviewer?
-- Why is MCP described as trusted code rather than a sandbox?
-- How would a team add another source such as Linear or Google Drive?
-- What additional isolation would be required for hostile repositories?
+| Owner | When | Do this |
+| --- | --- | --- |
+| Program sponsor | Before scheduling | Name real people and dates for every role |
+| Platform owner | Before rollout | Pin reusable workflows to a release or commit SHA |
+| Repository owner | Before enabling | Branch protection, encrypted secrets, exact repo allowlist |
+| Security owner | Before MCP is on | Approve each MCP server, the read-only tool allowlist and the command allowlist |
+| Operations owner | Before launch | Monitoring, key rotation, rollback, incident response |
+
+This talk deliberately doesn’t invent owners or dates; the adopting team fills
+them in.
+
+---
+
+## 16 · Keyboard: yes. Keys: never.
+
+Close on the callback to the title, then open Q&A.
+
+### Q&A prompts
+
+- Why GitHub Actions instead of running code inside the Slack process?
+- What survives a restart, and what is intentionally lost?
+- What stops a malicious diff from steering the reviewer?
+- Why is MCP trusted code rather than a sandbox?
+- How would you add another source, such as Google Drive?
+- What extra isolation would hostile repositories need?
+
+---
+
+## Presenter checklist
+
+- **One business day before:** verify Slack, model, repository and Actions
+  access, and record a completed run as a fallback.
+- **Assumed audience:** comfortable with Slack, GitHub pull requests and HTTP
+  APIs.
+- **Facts:** every architecture, command and security claim comes from the
+  files below. Any OpenAI-compatible endpoint works; You.com is named because it
+  is the current deployment’s single endpoint for inference and search.
 
 ## Repository references
 
