@@ -226,6 +226,44 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
 
 
 @pytest.mark.asyncio
+async def test_spec_review_splits_large_responses_into_slack_messages() -> None:
+    client = AsyncMock()
+    client.allowed_repositories = frozenset({"owner/repo"})
+    runner = AsyncMock()
+    runner.run.return_value = InferenceResult(
+        "## Conclusion\n\n" + ("Verified detail. " * 700),
+        "model",
+        "request",
+        10,
+        InferenceUsage(),
+    )
+    notion_tool = McpTool(
+        "mcp__notion__fetch",
+        "notion",
+        "fetch",
+        "Fetch page",
+        {},
+        read_only=True,
+        auto_approved=False,
+    )
+    context = _context("spec review from notion https://www.notion.so/spec-123")
+    plugin = CodingPlugin(
+        client,
+        policy=None,
+        max_prompt_chars=8_000,
+        agent_runner=runner,
+        mcp_manager=SimpleNamespace(tools=(notion_tool,)),
+    )
+
+    await _spec_handler(plugin)(context)
+
+    review_messages = [call.kwargs["text"] for call in context.say.await_args_list[1:]]
+    assert len(review_messages) > 1
+    assert all(len(message) <= 2_900 for message in review_messages)
+    assert all("too large" not in message for message in review_messages)
+
+
+@pytest.mark.asyncio
 async def test_spec_review_validates_syntax_and_admin_access() -> None:
     client = AsyncMock()
     client.allowed_repositories = frozenset({"owner/repo"})

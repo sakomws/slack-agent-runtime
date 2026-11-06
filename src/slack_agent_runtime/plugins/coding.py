@@ -13,6 +13,7 @@ from slack_agent_runtime.domain.commands import HelpEntry
 from slack_agent_runtime.inference.client import InferenceRouterError
 from slack_agent_runtime.plugins.api import CommandContext, PluginRoute
 from slack_agent_runtime.services.agent_runner import AgentLoopError
+from slack_agent_runtime.slack.formatting import split_slack_message
 from slack_agent_runtime.slack.ui import mcp_approval_blocks
 
 if TYPE_CHECKING:
@@ -220,16 +221,14 @@ class CodingPlugin:
             )
             return
         review = _clean_specification(result.content)
-        if not review or len(review) > self._max_prompt_chars:
+        if not review:
             await context.say(
-                text=(
-                    "The specification review is empty or too large for Slack. "
-                    "Narrow the Notion page and try again."
-                ),
+                text="The specification review is empty. Check the Notion page and try again.",
                 thread_ts=context.thread_ts,
             )
             return
-        await context.say(text=review, thread_ts=context.thread_ts)
+        for chunk in split_slack_message(review):
+            await context.say(text=chunk, thread_ts=context.thread_ts)
 
     async def _from_notion(
         self,
