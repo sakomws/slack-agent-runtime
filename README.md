@@ -8,6 +8,35 @@ as model output arrives.
 It runs entirely over outbound connections, so a laptop needs no public URL,
 tunnel, webhook, or cloud deployment.
 
+## Architecture at a glance
+
+Slack is the interaction harness. MCP provides governed access to data sources
+such as Notion specifications and Slack data. One OpenAI-compatible endpoint
+provides inference and search. GitHub Actions runs bounded coding and review
+workers, while GitHub stores code artifacts such as branches, diffs, pull
+requests, and reviews.
+
+```mermaid
+flowchart LR
+    U[Engineer] --> S[Slack interaction harness]
+    S --> R[Slack Agent Runtime]
+    R --> I[OpenAI-compatible inference and search endpoint]
+    R --> T[(Thread state)]
+    R --> M[MCP approval broker and data layer]
+    M --> N[Notion specifications]
+    M --> SD[Slack data]
+    R -->|repository_dispatch| A[GitHub Actions bounded execution]
+    A -->|inference credentials only| W[Bounded coding or review worker]
+    W -->|validated output| A
+    A -->|GitHub credential after worker exits| G[GitHub code artifacts]
+    A -->|Slack credential after worker exits| S
+```
+
+The model-facing worker receives inference credentials only. GitHub and Slack
+credentials are scoped to separate later Actions steps after the worker exits.
+The Actions runner provides bounded execution, not a security sandbox for
+hostile repository code.
+
 ## Install
 
 Requires Python 3.11+ and an OpenAI-compatible endpoint that implements
