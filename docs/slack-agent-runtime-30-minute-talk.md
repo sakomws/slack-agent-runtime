@@ -3,7 +3,7 @@
 > **Slack Agent Runtime:** from a Slack thread to a reviewed pull request, and
 > the AI never holds a GitHub or Slack token.
 
-A 30-minute talk for software engineers and platform teams. One idea carries
+A 30-minute talk (38 with the deep dive) for software engineers and platform teams. One idea carries
 it: **the agent gets to type, it never gets to publish.** Slack is the harness,
 MCP is the data layer, one OpenAI-compatible endpoint (You.com in the current
 deployment) does inference and search, GitHub Actions is the bounded sandbox,
@@ -12,26 +12,36 @@ from the model.
 
 ## Run of show
 
-| # | Slide | Time |
-| ---: | --- | ---: |
-| 1 | Give the bot the keyboard. Not the keys. | 0.5 min |
-| 2 | Friday, 4:52 pm | 1.5 min |
-| 3 | Chat is easy. Acting is where it bites. | 2 min |
-| 4 | Five layers. One job each. | 2 min |
-| 5 | Follow one request through the system | 3 min |
-| 6 | The model never holds the keys. | 2 min |
-| 7 | Bounded means finite, not instant. | 2 min |
-| 8 | Off-limits while it works. Checked after it’s gone. | 2 min |
-| 9 | Read-only is earned, not assumed. | 2.5 min |
-| 10 | Missing facts stay missing. | 1.5 min |
-| 11 | The model finds. The code decides. | 2.5 min |
-| 12 | A restart can lose a chat. Not a job. | 2 min |
-| 13 | Live demo: five commands, one thread | 2 min |
-| 14 | Three ideas worth stealing | 1 min |
-| 15 | Before you ship it | 0.5 min |
-| 16 | Keyboard: yes. Keys: never. | 0.5 min |
-| | Buffer for demo slippage | 2.5 min |
-| | **Total** | **30 min** |
+| # | Slide | Time | 30-min cut |
+| ---: | --- | ---: | :---: |
+| 1 | Give the bot the keyboard. Not the keys. | 0.5 min | ✓ |
+| 2 | Friday, 4:52 pm | 1.5 min | ✓ |
+| 3 | Chat is easy. Acting is where it bites. | 2 min | ✓ |
+| 4 | Five layers. One job each. | 2 min | ✓ |
+| 5 | Follow one request through the system | 3 min | ✓ |
+| 6 | Everything happens in the thread. | 1.5 min | ✓ |
+| 7 | One thread is one conversation. | 1.5 min | skip |
+| 8 | The spec sheet | 1 min | skip |
+| 9 | Ten modules, clean boundaries. | 1 min | skip |
+| 10 | Extend it without forking it. | 1 min | skip |
+| 11 | Runs on a laptop. No tunnel required. | 1 min | ✓ |
+| 12 | Signed, scanned and reproducible. | 1 min | skip |
+| 13 | The model never holds the keys. | 2 min | ✓ |
+| 14 | Bounded means finite, not instant. | 2 min | ✓ |
+| 15 | Off-limits while it works. Checked after it’s gone. | 2 min | ✓ |
+| 16 | Read-only is earned, not assumed. | 2.5 min | ✓ |
+| 17 | Missing facts stay missing. | 1.5 min | ✓ |
+| 18 | The model finds. The code decides. | 2.5 min | ✓ |
+| 19 | A restart can lose a chat. Not a job. | 2 min | ✓ |
+| 20 | Live demo: five commands, one thread | 2 min | ✓ |
+| 21 | Three ideas worth stealing | 1 min | ✓ |
+| 22 | Before you ship it | 0.5 min | ✓ |
+| 23 | Keyboard: yes. Keys: never. | 0.5 min | ✓ |
+| | Buffer for demo slippage | 2.5 min | none |
+| | **Total** | **38 min** | **30 min** |
+
+The full deck runs about 38 minutes. For a 30-minute slot, skip the slides
+marked “skip” and drop the demo buffer.
 
 Q&A runs after the 30 minutes.
 
@@ -119,7 +129,138 @@ the GitHub and Slack ones sit *after* the worker exits.
 
 ---
 
-## 6 · The model never holds the keys.
+## Deep dive: what it does and how it’s built
+
+Slides 6–12 are the product and engineering tour. In a 30-minute slot, keep
+slides 6 and 11 and skip the rest of this section (see the run of show).
+
+---
+
+## 6 · Everything happens in the thread.
+
+| Area | What it does | Commands |
+| --- | --- | --- |
+| Chat | DMs and `@app` mentions, streamed, multi-turn | `regenerate`, `cancel`, `delete last`, `clear` |
+| Models and search | Pick a model per thread; toggle web search | `model [name\|default]`, `web [on\|off]` |
+| Generation | Tune sampling, limits and reasoning effort | `stream`, `temperature`, `top-p`, `max-tokens`, `reasoning` |
+| MCP tools | See servers, tools and how each is approved | `tools`, `mcp status`, `mcp servers` |
+| Code and specs | Coding jobs from a request or a Notion spec | `code owner/repo <request>`, `code owner/repo from notion <url>`, `code status`, `spec review from notion <url>` |
+| Pull requests | List PRs, then run an independent review | `prs owner/repo [open\|closed\|all\|draft] [page N]`, `review owner/repo#N [model M]`, `review status` |
+
+Every setting is per thread, and `help` lists them all. Reasoning effort runs
+from `none` up to `max`.
+
+---
+
+## 7 · One thread is one conversation.
+
+**The rules**
+
+- Settings and history are scoped to the Slack channel and thread.
+- History is capped at 20 messages and 50,000 characters, and can be rebuilt
+  from Slack replies on a cache miss.
+- One request runs per thread at a time.
+- One progress message, edited at most once a second by default; the final
+  answer replaces it in chunks.
+- Anyone can read settings; only users in `SLACK_AGENT_RUNTIME_ADMIN_USER_IDS`
+  change the model, web search, streaming or generation settings.
+
+**Buttons on every answer:** Cancel, Regenerate, Web search, Streaming, Model
+(a searchable modal that changes only this thread), Clear, and feedback.
+Every button has a text command too, for accessibility and when a modal fails.
+
+---
+
+## 8 · The spec sheet
+
+| Layer | What it uses |
+| --- | --- |
+| Runtime | Python 3.11+, asyncio · MIT license · v0.1.0, beta |
+| Slack | `slack-bolt` over Socket Mode: outbound only, no public URL |
+| Inference | Any OpenAI-compatible API: streaming chat completions, models from `/v1/models` |
+| MCP | Official MCP SDK over stdio or Streamable HTTP |
+| State | In-memory by default; SQLite, Redis or PostgreSQL for durability |
+| Telemetry | OpenTelemetry over OTLP/gRPC; redacted structured JSON logs |
+| Deploy | pip or uv, Docker (non-root), Docker Compose, Helm chart |
+
+Every inference provider implements both normal and streaming completion, so
+nothing branches on provider. Telemetry is a no-op until an OTLP endpoint is
+set.
+
+---
+
+## 9 · Ten modules, clean boundaries.
+
+| Module | Owns |
+| --- | --- |
+| `domain/` | Commands, state, policy, validation |
+| `config.py` | The only code that reads the environment |
+| `inference/` | Provider protocol, HTTP client, telemetry |
+| `slack/` | Listeners, payloads, UI, history, delivery |
+| `plugins/` | Typed contracts, registry, lifecycle |
+| `mcp/` | Server config, sessions, approvals |
+| `coding/` | GitHub dispatch, coding and review workers |
+| `services/` | Conversations, commands, completions |
+| `storage/` | Versioned snapshots and backends |
+| `entrypoints/` | App, CLI, coding worker, PR reviewer |
+
+Services never read the environment, and network edges take their clients by
+constructor injection, so tests swap in fakes. The coding and review workers
+are separate entry points that run in GitHub Actions, not in the Slack process.
+
+---
+
+## 10 · Extend it without forking it.
+
+> MCP, coding and PR reviews are plugins too. The built-ins use the same
+> contracts you do.
+
+```dotenv
+SLACK_AGENT_RUNTIME_PLUGINS=echo,incident-tools
+```
+
+- Typed routes for commands, actions, views, events and reactions.
+- Loaded only when named, in that order; never auto-imported because a package
+  is installed.
+- Duplicate names and route conflicts fail at startup.
+- Namespaced JSON state through typed host methods, lifecycle hooks, and
+  failure isolation.
+
+A team adds a workflow without touching the core completion runner.
+
+---
+
+## 11 · Runs on a laptop. No tunnel required.
+
+1. **Create the Slack app** from `slack-manifest.yaml`, add an app-level token
+   with `connections:write`, and install it.
+2. **Set five values in `.env`:** `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`,
+   `INFERENCE_ROUTER_BASE_URL`, `INFERENCE_ROUTER_API_KEY`,
+   `INFERENCE_ROUTER_MODEL`.
+3. **Check, then run:**
+
+   ```bash
+   slack-agent --check
+   slack-agent
+   ```
+
+Run one process per Slack app: Socket Mode spreads events across connections.
+
+---
+
+## 12 · Signed, scanned and reproducible.
+
+| Every change (`ci.yml`, `container.yml`) | Every release tag (`release.yml`) |
+| --- | --- |
+| Ruff formatting and linting | Wheel, source archive and Helm chart |
+| Strict mypy type checks | SPDX SBOM and SHA-256 checksums |
+| pytest, including replayed Slack events | `linux/amd64` and `linux/arm64` images on GHCR |
+| Dependency audit and Helm lint/render | Keyless Cosign signatures and build provenance |
+| Container runs as non-root and passes its health check | Signed with GitHub OIDC: no signing key to manage |
+
+---
+
+## 13 · The model never holds the keys.
 
 **On screen:** the rule, then four steps.
 
@@ -137,7 +278,7 @@ has finished, not a later tool call in the same process.
 
 ---
 
-## 7 · Bounded means finite, not instant.
+## 14 · Bounded means finite, not instant.
 
 | 48 | 20 | 50 | 500K | 30 |
 | :---: | :---: | :---: | :---: | :---: |
@@ -155,7 +296,7 @@ tools off and asks for one factual summary that calls out unfinished work.
 
 ---
 
-## 8 · Off-limits while it works. Checked after it’s gone.
+## 15 · Off-limits while it works. Checked after it’s gone.
 
 | The worker can’t touch | The workflow rejects |
 | --- | --- |
@@ -173,7 +314,7 @@ on trusted repositories.
 
 ---
 
-## 9 · Read-only is earned, not assumed.
+## 16 · Read-only is earned, not assumed.
 
 > **Operator allowlisted the tool** + **server marks it `readOnlyHint`** =
 > **runs automatically.**
@@ -190,7 +331,7 @@ replica when approvals are on. And MCP servers are trusted code, not a sandbox.
 
 ---
 
-## 10 · Missing facts stay missing.
+## 17 · Missing facts stay missing.
 
 ```text
 spec review from notion <page URL>
@@ -208,7 +349,7 @@ Notion-backed command.
 
 ---
 
-## 11 · The model finds. The code decides.
+## 18 · The model finds. The code decides.
 
 1. Pin the PR’s head commit SHA.
 2. Treat every title, body, comment and diff as untrusted.
@@ -228,7 +369,7 @@ table.
 
 ---
 
-## 12 · A restart can lose a chat. Not a job.
+## 19 · A restart can lose a chat. Not a job.
 
 | Survives a restart | Lost on purpose |
 | --- | --- |
@@ -246,7 +387,7 @@ map you supply.
 
 ---
 
-## 13 · Live demo: five commands, one thread
+## 20 · Live demo: five commands, one thread
 
 ```text
 help
@@ -270,7 +411,7 @@ real, accessible Notion page is ready; never a made-up URL.
 
 ---
 
-## 14 · Three ideas worth stealing
+## 21 · Three ideas worth stealing
 
 1. Slack is an engineering harness, not just a chat window.
 2. Keep the thinking away from the keys that publish.
@@ -280,7 +421,7 @@ If people remember one thing, it is number two.
 
 ---
 
-## 15 · Before you ship it
+## 22 · Before you ship it
 
 | Owner | When | Do this |
 | --- | --- | --- |
@@ -295,7 +436,7 @@ them in.
 
 ---
 
-## 16 · Keyboard: yes. Keys: never.
+## 23 · Keyboard: yes. Keys: never.
 
 Close on the callback to the title, then open Q&A.
 
