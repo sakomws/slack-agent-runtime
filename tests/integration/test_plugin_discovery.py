@@ -11,10 +11,10 @@ def test_echo_plugin_is_discovered_from_distribution_metadata(
 ) -> None:
     """Exercise importlib discovery rather than replacing it with a fake loader."""
 
-    distribution = tmp_path / "slack_agent_runtime_echo-0.2.0.dist-info"
+    distribution = tmp_path / "slack_agent_runtime_echo-0.1.0.dist-info"
     distribution.mkdir()
     (distribution / "METADATA").write_text(
-        "Metadata-Version: 2.1\nName: slack-agent-runtime-echo\nVersion: 0.2.0\n",
+        "Metadata-Version: 2.1\nName: slack-agent-runtime-echo\nVersion: 0.1.0\n",
         encoding="utf-8",
     )
     (distribution / "entry_points.txt").write_text(

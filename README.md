@@ -666,7 +666,7 @@ uv run pytest -q tests/integration/test_slack_events.py
 
 ## Releases, signing, and SBOMs
 
-Pushing a SemVer tag such as `v0.2.0` runs `release.yml`. The tag must match
+Pushing a SemVer tag such as `v0.1.0` runs `release.yml`. The tag must match
 the versions in `pyproject.toml` and the chart's `version` and `appVersion`.
 The workflow:
 
@@ -682,16 +682,16 @@ Create a release after updating all three version declarations:
 
 ```bash
 uv lock
-git commit -am "release: v0.2.0"
-git tag v0.2.0
-git push origin main v0.2.0
+git commit -am "release: v0.1.0"
+git tag v0.1.0
+git push origin main v0.1.0
 ```
 
 Verify the keyless signature and attached SBOM with Cosign:
 
 ```bash
-IMAGE=ghcr.io/OWNER/REPOSITORY:0.2.0
-IDENTITY=https://github.com/OWNER/REPOSITORY/.github/workflows/release.yml@refs/tags/v0.2.0
+IMAGE=ghcr.io/OWNER/REPOSITORY:0.1.0
+IDENTITY=https://github.com/OWNER/REPOSITORY/.github/workflows/release.yml@refs/tags/v0.1.0
 
 cosign verify \
   --certificate-identity "$IDENTITY" \

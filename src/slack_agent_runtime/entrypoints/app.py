@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Slack Agent Runtime",
     description="Connects Slack to the Inference Router",
-    version="0.2.0",
+    version="0.1.0",
     lifespan=lifespan,
 )
 
