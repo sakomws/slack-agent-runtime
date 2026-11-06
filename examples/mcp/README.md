@@ -58,6 +58,18 @@ Install Node.js and set `SLACK_MCP_BOT_TOKEN` plus `SLACK_MCP_TEAM_ID`. Use a
 separate, least-privilege Slack app for MCP tool access rather than reusing the
 runtime's own bot token.
 
+## You.com
+
+```bash
+cp examples/mcp/youdotcom.json mcp.json
+```
+
+The template connects directly to You.com's official keyless Streamable HTTP
+endpoint. It exposes `you-search` and `you-discover` with a free daily query
+limit and requires no additional credential. For production or additional
+tools, use `https://api.you.com/mcp` with a dedicated `YDC_API_KEY` bearer
+token.
+
 To enable several servers, merge their entries under one `mcpServers` object.
 `autoApprove` is empty in every template: tools require administrator approval
 until an operator explicitly allowlists a tool that also advertises

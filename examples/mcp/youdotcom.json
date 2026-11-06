@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "youdotcom": {
+      "transport": "streamable-http",
+      "url": "https://api.you.com/mcp?profile=free",
+      "autoApprove": []
+    }
+  }
+}

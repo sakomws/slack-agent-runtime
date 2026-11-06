@@ -353,6 +353,8 @@ Ready-to-copy templates are provided for:
   Streamable HTTP endpoint
 - Notion: `examples/mcp/notion.json` using the official stdio package
 - Slack: `examples/mcp/slack.json` using the stdio reference server
+- You.com: `examples/mcp/youdotcom.json` using the official keyless Streamable
+  HTTP endpoint for search and discovery
 
 Notion and Slack require Node.js plus `npx` on the host. Set
 `NOTION_MCP_HEADERS` to the JSON header object expected by Notion's server.
