@@ -2,7 +2,10 @@
   "mcpServers": {
     "youdotcom": {
       "transport": "streamable-http",
-      "url": "https://api.you.com/mcp?profile=free",
+      "url": "https://api.you.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${INFERENCE_ROUTER_API_KEY}"
+      },
       "autoApprove": []
     }
   }

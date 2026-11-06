@@ -64,11 +64,11 @@ runtime's own bot token.
 cp examples/mcp/youdotcom.json mcp.json
 ```
 
-The template connects directly to You.com's official keyless Streamable HTTP
-endpoint. It exposes `you-search` and `you-discover` with a free daily query
-limit and requires no additional credential. For production or additional
-tools, use `https://api.you.com/mcp` with a dedicated `YDC_API_KEY` bearer
-token.
+The template connects directly to You.com's official authenticated Streamable
+HTTP endpoint and reuses `INFERENCE_ROUTER_API_KEY`. It exposes `you-search`,
+`you-contents`, `you-discover`, and `you-balance`. To test without a key, use
+`https://api.you.com/mcp?profile=free`; the keyless profile exposes only
+`you-search` and `you-discover` with a free daily query limit.
 
 To enable several servers, merge their entries under one `mcpServers` object.
 `autoApprove` is empty in every template: tools require administrator approval
