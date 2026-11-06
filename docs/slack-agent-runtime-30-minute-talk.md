@@ -1,5 +1,8 @@
 # Slack Agent Runtime: From Conversation to Reviewed Pull Request
 
+> Turn Slack threads into review-ready pull requests—without giving the AI
+> your GitHub credentials.
+
 This talk recommends a five-part engineering architecture: Slack as the
 interaction harness, Model Context Protocol (MCP) as the data layer, You.com as
 one inference-and-search endpoint, GitHub Actions as the bounded execution

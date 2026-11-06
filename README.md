@@ -1,5 +1,8 @@
 # Slack Agent Runtime
 
+> Turn Slack threads into review-ready pull requests—without giving the AI
+> your GitHub credentials.
+
 This service connects Slack to the Inference Router using Slack Socket Mode. It
 supports direct messages and `@app` mentions, sends each message as a
 multi-turn streaming chat completion, and updates the originating Slack thread
