@@ -67,7 +67,8 @@ Optional Q&A is outside the 30-minute talk.
 ### On slide
 
 - **Slack:** interaction harness
-- **MCP:** data layer for Notion specifications and Slack data
+- **MCP:** data layer for Notion specifications, Linear work items, and Slack
+  data
 - **You.com:** one OpenAI-compatible endpoint for inference and search
 - **GitHub Actions:** bounded execution sandbox
 - **GitHub code-artifact layer:** repositories, branches, diffs, reviews, and
@@ -80,9 +81,10 @@ notification context for every workflow. Socket Mode is Slack's outbound
 WebSocket connection for delivering events without a public inbound webhook.
 
 MCP is the data layer. Notion is where specification documents live, while a
-configured Slack MCP server can expose Slack data to model workflows. Slack
-therefore has two roles: the human interaction harness and, through MCP, an
-optional governed data source.
+configured Linear MCP server exposes work items and a configured Slack MCP
+server can expose Slack data to model workflows. Slack therefore has two roles:
+the human interaction harness and, through MCP, an optional governed data
+source.
 
 You.com is the current deployment's single OpenAI-compatible endpoint for
 inference and search. The reusable runtime remains provider-neutral.
@@ -176,6 +178,7 @@ flowchart LR
     R --> P[(Thread state)]
     R --> A[MCP approval broker and data layer]
     A --> N[Notion specifications]
+    A --> L[Linear work items]
     A --> SD[Slack data]
     R -->|repository_dispatch| GA[GitHub Actions sandbox]
     GA -->|inference credentials only| W[Bounded coding or review worker]
@@ -195,9 +198,10 @@ OpenAI-compatible API, throttles progress updates, and stores only final
 assistant content.
 
 The MCP data path also runs inside the runtime because that is where approvals
-and source credentials live. Notion supplies specification documents. Slack can
-supply governed workspace data when its MCP server is configured. MCP is not a
-sandbox; only trusted servers should be installed.
+and source credentials live. Notion supplies specification documents, Linear
+supplies work items, and Slack can supply governed workspace data when its MCP
+server is configured. MCP is not a sandbox; only trusted servers should be
+installed.
 
 The GitHub path leaves the runtime through `repository_dispatch`, a custom
 GitHub event that starts a repository workflow. GitHub Actions becomes the
@@ -292,9 +296,9 @@ core completion runner or teaching every service about a new command.
 ### Speaker notes
 
 MCP provides tool discovery and invocation for the data layer. In this
-deployment, Notion supplies specification documents and Slack can supply
-workspace data. The runtime connects directly to configured servers; it does
-not require a separate gateway.
+deployment, Notion supplies specification documents, Linear supplies work
+items, and Slack can supply workspace data. The runtime connects directly to
+configured servers; it does not require a separate gateway.
 
 Every discovered tool receives a namespaced model-facing name so the registry
 can prevent or detect cross-server naming collisions. Arguments and results are

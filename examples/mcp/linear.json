@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "linear": {
+      "transport": "streamable-http",
+      "url": "https://mcp.linear.app/mcp/readonly",
+      "headers": {
+        "Authorization": "Bearer ${LINEAR_MCP_TOKEN}"
+      },
+      "autoApprove": []
+    }
+  }
+}

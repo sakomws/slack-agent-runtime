@@ -14,10 +14,11 @@ tunnel, webhook, or cloud deployment.
 ## Architecture at a glance
 
 Slack is the interaction harness. MCP provides governed access to data sources
-such as Notion specifications and Slack data. One OpenAI-compatible endpoint
-provides inference and search; the current deployment uses You.com for that
-endpoint. GitHub Actions runs bounded coding and review workers, while GitHub
-stores code artifacts such as branches, diffs, pull requests, and reviews.
+such as Notion specifications, Linear work items, and Slack data. One
+OpenAI-compatible endpoint provides inference and search; the current deployment
+uses You.com for that endpoint. GitHub Actions runs bounded coding and review
+workers, while GitHub stores code artifacts such as branches, diffs, pull
+requests, and reviews.
 
 ```mermaid
 flowchart LR
@@ -27,6 +28,7 @@ flowchart LR
     R --> T[(Thread state)]
     R --> M[MCP approval broker and data layer]
     M --> N[Notion specifications]
+    M --> L[Linear work items]
     M --> SD[Slack data]
     R -->|repository_dispatch| A[GitHub Actions bounded execution]
     A -->|inference credentials only| W[Bounded coding or review worker]
@@ -338,14 +340,17 @@ GITHUB_MCP_TOKEN=replace-me
 Ready-to-copy templates are provided for:
 
 - GitHub: `examples/mcp/github.json` using Streamable HTTP
+- Linear: `examples/mcp/linear.json` using Linear's hosted read-only
+  Streamable HTTP endpoint
 - Notion: `examples/mcp/notion.json` using the official stdio package
 - Slack: `examples/mcp/slack.json` using the stdio reference server
 
 Notion and Slack require Node.js plus `npx` on the host. Set
 `NOTION_MCP_HEADERS` to the JSON header object expected by Notion's server.
-Set `SLACK_MCP_BOT_TOKEN` and `SLACK_MCP_TEAM_ID` for the Slack server. These
-credentials are separate from the tokens used by this Slack app. Combine
-entries under one `mcpServers` object to enable multiple servers.
+Set `LINEAR_MCP_TOKEN` to a read-only Linear API key or OAuth access token. Set
+`SLACK_MCP_BOT_TOKEN` and `SLACK_MCP_TEAM_ID` for the Slack server. These
+credentials are separate from the tokens used by this Slack app. Combine entries
+under one `mcpServers` object to enable multiple servers.
 The standard container image does not include Node.js or MCP server binaries;
 use Streamable HTTP servers or build a derived image containing each configured
 stdio executable. Mount the MCP JSON read-only and set

@@ -37,6 +37,17 @@ The configured server must be named `notion`, as in the supplied template.
 Notion credentials remain in this runtime; only the bounded, normalized
 requirements are sent to the target repository's Actions workflow.
 
+## Linear
+
+```bash
+cp examples/mcp/linear.json mcp.json
+```
+
+Set `LINEAR_MCP_TOKEN` to a Linear API key or OAuth access token with read-only
+access. The template uses Linear's official hosted Streamable HTTP read-only
+endpoint. Keep `autoApprove` empty until each discovered tool and its
+annotations have been reviewed.
+
 ## Slack
 
 ```bash
