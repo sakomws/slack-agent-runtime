@@ -56,6 +56,11 @@ credentials are scoped to separate later Actions steps after the worker exits.
 The Actions runner provides bounded execution, not a security sandbox for
 hostile repository code.
 
+See the [technical specification](docs/slack-agent-runtime-tech-spec.md) for
+requirements, decisions, risks, and rollout work. The
+[30-minute talk](docs/slack-agent-runtime-30-minute-talk.md) provides a guided
+architecture walkthrough.
+
 ## Install
 
 Requires Python 3.11+ and an OpenAI-compatible endpoint that implements
