@@ -131,7 +131,9 @@ async def test_notion_spec_is_grounded_then_dispatched_without_persisting_conten
         read_only=True,
         auto_approved=False,
     )
-    context = _context("code owner/repo from notion https://www.notion.so/spec-123")
+    context = _context(
+        "code owner/repo from notion <https://app.notion.com/p/spec-123|app.notion.com/p/spec-123>"
+    )
     plugin = CodingPlugin(
         client,
         policy=None,
@@ -145,6 +147,9 @@ async def test_notion_spec_is_grounded_then_dispatched_without_persisting_conten
     run_kwargs = runner.run.await_args.kwargs
     assert run_kwargs["allowed_tool_names"] == frozenset({"mcp__notion__fetch"})
     assert run_kwargs["required_tool_names"] == frozenset({"mcp__notion__fetch"})
+    assert run_kwargs["messages"][1]["content"] == (
+        "Notion specification URL: https://app.notion.com/p/spec-123"
+    )
     dispatch_payload = client.dispatch.await_args.args[1]
     assert "Grounded requirements" in dispatch_payload["prompt"]
     assert "add the import endpoint" in dispatch_payload["prompt"]
@@ -193,7 +198,9 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
         read_only=True,
         auto_approved=False,
     )
-    context = _context("spec review from notion https://www.notion.so/spec-123")
+    context = _context(
+        "spec review from notion <https://app.notion.com/p/spec-123|app.notion.com/p/spec-123>"
+    )
     plugin = CodingPlugin(
         client,
         policy=None,
@@ -207,6 +214,9 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
     run_kwargs = runner.run.await_args.kwargs
     assert run_kwargs["allowed_tool_names"] == frozenset({"mcp__notion__fetch"})
     assert run_kwargs["required_tool_names"] == frozenset({"mcp__notion__fetch"})
+    assert run_kwargs["messages"][1]["content"] == (
+        "Notion specification URL: https://app.notion.com/p/spec-123"
+    )
     instructions = run_kwargs["messages"][0]["content"]
     assert "Define the audience and purpose" in instructions
     assert "Separate facts, assumptions, decisions, and open questions" in instructions

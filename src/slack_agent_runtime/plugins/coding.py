@@ -140,8 +140,8 @@ class CodingPlugin:
                 thread_ts=context.thread_ts,
             )
             return
-        page_url = words[4].strip()
-        if not _valid_notion_url(page_url):
+        page_url = _notion_page_url(words[4])
+        if page_url is None:
             await context.say(
                 text=(
                     "Use a valid HTTPS `app.notion.com`, `notion.so`, or `notion.site` page URL."
@@ -237,7 +237,8 @@ class CodingPlugin:
         repository: str,
         page_url: str,
     ) -> None:
-        if not _valid_notion_url(page_url):
+        normalized_page_url = _notion_page_url(page_url)
+        if normalized_page_url is None:
             await context.say(
                 text=(
                     "Use a valid HTTPS `app.notion.com`, `notion.so`, or `notion.site` page URL."
@@ -245,6 +246,7 @@ class CodingPlugin:
                 thread_ts=context.thread_ts,
             )
             return
+        page_url = normalized_page_url
         if self._agent_runner is None or self._mcp_manager is None:
             await context.say(
                 text="Notion MCP is not configured for this runtime.",
@@ -399,18 +401,22 @@ class CodingPlugin:
         await context.say(text=text, thread_ts=context.thread_ts)
 
 
-def _valid_notion_url(value: str) -> bool:
+def _notion_page_url(value: str) -> str | None:
     if not value or len(value) > 2_048 or any(character.isspace() for character in value):
-        return False
-    parsed = urlparse(value)
+        return None
+    candidate = value.strip()
+    if candidate.startswith("<") and candidate.endswith(">"):
+        candidate = candidate[1:-1].split("|", maxsplit=1)[0]
+    parsed = urlparse(candidate)
     hostname = (parsed.hostname or "").lower()
-    return parsed.scheme == "https" and (
+    valid = parsed.scheme == "https" and (
         hostname == "app.notion.com"
         or hostname == "notion.so"
         or hostname.endswith(".notion.so")
         or hostname == "notion.site"
         or hostname.endswith(".notion.site")
     )
+    return candidate if valid else None
 
 
 def _clean_specification(value: str) -> str:
