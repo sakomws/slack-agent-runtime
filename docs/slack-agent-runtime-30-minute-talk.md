@@ -3,7 +3,7 @@
 > **Slack Agent Runtime:** from a Slack thread to a reviewed pull request, and
 > the AI never holds a GitHub or Slack token.
 
-A 30-minute talk (50.5 minutes with every slide) for software engineers and
+A 30-minute talk (53 minutes with every slide) for software engineers and
 platform teams. One idea carries it: **the agent gets to type, it never gets to publish.** Slack is the harness,
 MCP is the data layer, one OpenAI-compatible endpoint (You.com in the current
 deployment) does inference and search, GitHub Actions is the bounded sandbox,
@@ -15,42 +15,44 @@ from the model.
 | # | Slide | Time | 30-min cut |
 | ---: | --- | ---: | :---: |
 | 1 | Give the bot the keyboard. Not the keys. | 0.5 min | ✓ |
-| 2 | Friday, 4:52 pm | 1.5 min | ✓ |
-| 3 | Chat is easy. Acting is where it bites. | 2 min | ✓ |
-| 4 | Four jobs it does from a thread. | 1 min | ✓ |
-| 5 | Story 1 · The spec that wasn’t ready | 1.5 min | skip |
-| 6 | Story 2 · The Friday review queue | 1.5 min | skip |
-| 7 | Story 3 · Questions with context | 1 min | skip |
-| 8 | Five layers. One job each. | 2 min | ✓ |
-| 9 | Follow one request through the system | 3 min | ✓ |
-| 10 | One endpoint for models and web search. | 1.5 min | ✓ |
-| 11 | Three values. That’s the AI’s whole world. | 1.5 min | skip |
-| 12 | Everything happens in the thread. | 1.5 min | ✓ |
-| 13 | One thread is one conversation. | 1.5 min | skip |
-| 14 | From mention to answer in one edited message. | 1.5 min | skip |
-| 15 | Who can do what is configuration, not convention. | 1 min | skip |
-| 16 | The spec sheet | 1 min | skip |
-| 17 | Ten modules, clean boundaries. | 1 min | skip |
-| 18 | Extend it without forking it. | 1 min | skip |
-| 19 | Runs on a laptop. No tunnel required. | 1 min | ✓ |
-| 20 | Three opt-ins. Each gets its own narrow token. | 1 min | skip |
-| 21 | Signed, scanned and reproducible. | 1 min | skip |
-| 22 | The model never holds the keys. | 2 min | ✓ |
-| 23 | Bounded means finite, not instant. | 2 min | skip |
-| 24 | Off-limits while it works. Checked after it’s gone. | 2 min | ✓ |
-| 25 | Read-only is earned, not assumed. | 2.5 min | ✓ |
-| 26 | Missing facts stay missing. | 1.5 min | ✓ |
-| 27 | The model finds. The code decides. | 2.5 min | ✓ |
-| 28 | A restart can lose a chat. Not a job. | 2 min | ✓ |
-| 29 | Live demo: five commands, one thread | 2 min | ✓ |
-| 30 | Great on trusted repos. Not a sandbox for hostile code. | 1 min | skip |
-| 31 | Three ideas worth stealing | 1 min | ✓ |
-| 32 | Before you ship it | 0.5 min | skip |
-| 33 | Keyboard: yes. Keys: never. | 0.5 min | ✓ |
+| 2 | Quick show of hands | 1 min | ✓ |
+| 3 | Friday, 4:52 pm | 1.5 min | ✓ |
+| 4 | Chat is easy. Acting is where it bites. | 2 min | skip |
+| 5 | Four jobs it does from a thread. | 1 min | skip |
+| 6 | Story 1 · The spec that wasn’t ready | 1.5 min | skip |
+| 7 | Story 2 · The Friday review queue | 1.5 min | skip |
+| 8 | Story 3 · Questions with context | 1 min | skip |
+| 9 | Five layers. One job each. | 2 min | ✓ |
+| 10 | Why “harness”? | 1.5 min | ✓ |
+| 11 | Follow one request through the system | 3 min | ✓ |
+| 12 | One endpoint for models and web search. | 1.5 min | ✓ |
+| 13 | Three values. That’s the AI’s whole world. | 1.5 min | skip |
+| 14 | Everything happens in the thread. | 1.5 min | ✓ |
+| 15 | One thread is one conversation. | 1.5 min | skip |
+| 16 | From mention to answer in one edited message. | 1.5 min | skip |
+| 17 | Who can do what is configuration, not convention. | 1 min | skip |
+| 18 | The spec sheet | 1 min | skip |
+| 19 | Ten modules, clean boundaries. | 1 min | skip |
+| 20 | Extend it without forking it. | 1 min | skip |
+| 21 | Runs on a laptop. No tunnel required. | 1 min | ✓ |
+| 22 | Three opt-ins. Each gets its own narrow token. | 1 min | skip |
+| 23 | Signed, scanned and reproducible. | 1 min | skip |
+| 24 | The model never holds the keys. | 2 min | ✓ |
+| 25 | Bounded means finite, not instant. | 2 min | skip |
+| 26 | Off-limits while it works. Checked after it’s gone. | 2 min | ✓ |
+| 27 | Read-only is earned, not assumed. | 2.5 min | ✓ |
+| 28 | Missing facts stay missing. | 1.5 min | ✓ |
+| 29 | The model finds. The code decides. | 2.5 min | ✓ |
+| 30 | A restart can lose a chat. Not a job. | 2 min | ✓ |
+| 31 | Live demo: five commands, one thread | 2 min | ✓ |
+| 32 | Great on trusted repos. Not a sandbox for hostile code. | 1 min | skip |
+| 33 | Three ideas worth stealing | 1 min | ✓ |
+| 34 | Before you ship it | 0.5 min | skip |
+| 35 | Keyboard: yes. Keys: never. | 0.5 min | ✓ |
 | | Buffer for demo slippage | 2.5 min | none |
-| | **Total** | **50.5 min** | **30 min** |
+| | **Total** | **53 min** | **29.5 min** |
 
-The full deck runs about 50.5 minutes. For a 30-minute slot, skip the slides
+The full deck runs about 53 minutes. For a 30-minute slot, skip the slides
 marked “skip” and drop the demo buffer.
 
 Q&A runs after the 30 minutes.
@@ -67,7 +69,23 @@ code, it can never publish it. The rest is how we enforce that.
 
 ---
 
-## 2 · Friday, 4:52 pm
+## 2 · Quick show of hands
+
+**On screen:** “Before we start: raise a hand if…”
+
+1. …an AI agent can push to one of your repos today.
+2. …you know exactly which tokens that agent can read.
+3. …you’ve reviewed a PR written by an AI this month.
+4. …you’d let it merge to main without a human.
+
+Ask each one, pause, and say roughly how many hands went up; don’t comment on
+anyone. The gap between questions 1 and 2 is the talk: agents that can act,
+holding tokens nobody has inventoried. Call back to question 2 on slide
+24.
+
+---
+
+## 3 · Friday, 4:52 pm
 
 **On screen:** a Slack thread.
 
@@ -85,7 +103,7 @@ never held the credential that published it. The next 28 minutes are how.
 
 ---
 
-## 3 · Chat is easy. Acting is where it bites.
+## 4 · Chat is easy. Acting is where it bites.
 
 **On screen:** four cards.
 
@@ -107,13 +125,13 @@ make it leak.
 
 ## Use cases: four jobs and three stories
 
-Slides 4–7 show what people actually do with it before the
+Slides 5–8 show what people actually do with it before the
 architecture. The stories are scenarios built from the shipped commands, not
-customer case studies. In a 30-minute slot, keep slide 4 and skip the stories.
+customer case studies. In a 30-minute slot, skip this whole section; the show of hands sets up the problem instead.
 
 ---
 
-## 4 · Four jobs it does from a thread.
+## 5 · Four jobs it does from a thread.
 
 | Job | Command | What comes back |
 | --- | --- | --- |
@@ -126,7 +144,7 @@ Plus everyday chat with live context: web search and read-only MCP tools.
 
 ---
 
-## 5 · Story 1 · The spec that wasn’t ready
+## 6 · Story 1 · The spec that wasn’t ready
 
 **On screen:** from a Notion page to a pull request, gaps named first.
 
@@ -148,7 +166,7 @@ payload, so collaborators with Actions access can see it.
 
 ---
 
-## 6 · Story 2 · The Friday review queue
+## 7 · Story 2 · The Friday review queue
 
 **On screen:** a second reviewer that can’t be talked into approving.
 
@@ -164,7 +182,7 @@ Branch protection and required CI remain the final gate.
 
 ---
 
-## 7 · Story 3 · Questions with context
+## 8 · Story 3 · Questions with context
 
 **On screen:** read tools run; write tools wait for a human.
 
@@ -183,7 +201,7 @@ call. Tool names in the story are generic on purpose.
 
 ---
 
-## 8 · Five layers. One job each.
+## 9 · Five layers. One job each.
 
 | Layer | Job | What it means here |
 | --- | --- | --- |
@@ -199,7 +217,24 @@ endpoint. Human merge approval and branch protection stay the final control.
 
 ---
 
-## 9 · Follow one request through the system
+## 10 · Why “harness”?
+
+> A harness doesn’t weaken the horse. It makes its strength usable.
+
+| Harness | In this system |
+| --- | --- |
+| The horse | The model: strong and fast, but it doesn’t pick the road |
+| Reins | The Slack thread: a human steers, approves and can cancel |
+| Blinkers | The worker sees one checkout and one inference key |
+| Traces | Round, command, diff and time limits it pulls against |
+| The driver’s pocket | GitHub and Slack keys, and the merge button. Never the horse’s |
+
+People hear “harness” as a test harness; mean it literally. That’s also the
+logo: a horse in a bridle whose reins end in a keyboard key.
+
+---
+
+## 11 · Follow one request through the system
 
 ![Slack Engineering Agent Architecture](images/slack-engineering-agent-architecture.svg)
 
@@ -218,7 +253,7 @@ the GitHub and Slack ones sit *after* the worker exits.
 
 ---
 
-## 10 · One endpoint for models and web search.
+## 12 · One endpoint for models and web search.
 
 **On screen:** You.com Inference Router, the inference layer in the diagram.
 
@@ -238,7 +273,7 @@ Muse Spark 1.3; recheck the list before presenting.
 
 ---
 
-## 11 · Three values. That’s the AI’s whole world.
+## 13 · Three values. That’s the AI’s whole world.
 
 | What | How the runtime uses it |
 | --- | --- |
@@ -256,12 +291,12 @@ never in the worker, and like every template `autoApprove` starts empty.
 
 ## Deep dive: what it does and how it’s built
 
-Slides 12–21 are the product and engineering tour. In a 30-minute slot,
-keep slides 12 and 19 and skip the rest of this section (see the run of show).
+Slides 14–23 are the product and engineering tour. In a 30-minute slot,
+keep slides 14 and 21 and skip the rest of this section (see the run of show).
 
 ---
 
-## 12 · Everything happens in the thread.
+## 14 · Everything happens in the thread.
 
 | Area | What it does | Commands |
 | --- | --- | --- |
@@ -277,7 +312,7 @@ from `none` up to `max`.
 
 ---
 
-## 13 · One thread is one conversation.
+## 15 · One thread is one conversation.
 
 **The rules**
 
@@ -296,7 +331,7 @@ Every button has a text command too, for accessibility and when a modal fails.
 
 ---
 
-## 14 · From mention to answer in one edited message.
+## 16 · From mention to answer in one edited message.
 
 Event (Socket Mode; bot events ignored) → context (thread history and settings,
 one request per thread) → stream (`/v1/chat/completions` with `stream=true`) →
@@ -310,7 +345,7 @@ progress (one message, edited at most once a second by default) → final
 
 ---
 
-## 15 · Who can do what is configuration, not convention.
+## 17 · Who can do what is configuration, not convention.
 
 | Question | Setting | Default |
 | --- | --- | --- |
@@ -325,7 +360,7 @@ restart.
 
 ---
 
-## 16 · The spec sheet
+## 18 · The spec sheet
 
 | Layer | What it uses |
 | --- | --- |
@@ -343,7 +378,7 @@ set.
 
 ---
 
-## 17 · Ten modules, clean boundaries.
+## 19 · Ten modules, clean boundaries.
 
 | Module | Owns |
 | --- | --- |
@@ -364,7 +399,7 @@ are separate entry points that run in GitHub Actions, not in the Slack process.
 
 ---
 
-## 18 · Extend it without forking it.
+## 20 · Extend it without forking it.
 
 > MCP, coding and PR reviews are plugins too. The built-ins use the same
 > contracts you do.
@@ -384,7 +419,7 @@ A team adds a workflow without touching the core completion runner.
 
 ---
 
-## 19 · Runs on a laptop. No tunnel required.
+## 21 · Runs on a laptop. No tunnel required.
 
 1. **Create the Slack app** from `slack-manifest.yaml`, add an app-level token
    with `connections:write`, and install it.
@@ -402,7 +437,7 @@ Run one process per Slack app: Socket Mode spreads events across connections.
 
 ---
 
-## 20 · Three opt-ins. Each gets its own narrow token.
+## 22 · Three opt-ins. Each gets its own narrow token.
 
 | Coding jobs | PR review | MCP tools |
 | --- | --- | --- |
@@ -415,7 +450,7 @@ comment, because GitHub allows neither on your own PR.
 
 ---
 
-## 21 · Signed, scanned and reproducible.
+## 23 · Signed, scanned and reproducible.
 
 | Every change (`ci.yml`, `container.yml`) | Every release tag (`release.yml`) |
 | --- | --- |
@@ -427,7 +462,7 @@ comment, because GitHub allows neither on your own PR.
 
 ---
 
-## 22 · The model never holds the keys.
+## 24 · The model never holds the keys.
 
 **On screen:** the rule, then four steps.
 
@@ -443,9 +478,12 @@ has finished, not a later tool call in the same process.
 > A prompt injection can make the model say anything. It can’t make it leak a
 > token it never had.
 
+Callback to the show of hands: here the answer to question 2 is easy, because
+the model’s process holds exactly three values.
+
 ---
 
-## 23 · Bounded means finite, not instant.
+## 25 · Bounded means finite, not instant.
 
 | 48 | 20 | 50 | 500K | 30 |
 | :---: | :---: | :---: | :---: | :---: |
@@ -463,7 +501,7 @@ tools off and asks for one factual summary that calls out unfinished work.
 
 ---
 
-## 24 · Off-limits while it works. Checked after it’s gone.
+## 26 · Off-limits while it works. Checked after it’s gone.
 
 | The worker can’t touch | The workflow rejects |
 | --- | --- |
@@ -481,7 +519,7 @@ on trusted repositories.
 
 ---
 
-## 25 · Read-only is earned, not assumed.
+## 27 · Read-only is earned, not assumed.
 
 > **Operator allowlisted the tool** + **server marks it `readOnlyHint`** =
 > **runs automatically.**
@@ -498,7 +536,7 @@ replica when approvals are on. And MCP servers are trusted code, not a sandbox.
 
 ---
 
-## 26 · Missing facts stay missing.
+## 28 · Missing facts stay missing.
 
 ```text
 spec review from notion <page URL>
@@ -516,7 +554,7 @@ Notion-backed command.
 
 ---
 
-## 27 · The model finds. The code decides.
+## 29 · The model finds. The code decides.
 
 1. Pin the PR’s head commit SHA.
 2. Treat every title, body, comment and diff as untrusted.
@@ -536,7 +574,7 @@ table.
 
 ---
 
-## 28 · A restart can lose a chat. Not a job.
+## 30 · A restart can lose a chat. Not a job.
 
 | Survives a restart | Lost on purpose |
 | --- | --- |
@@ -554,7 +592,7 @@ map you supply.
 
 ---
 
-## 29 · Live demo: five commands, one thread
+## 31 · Live demo: five commands, one thread
 
 ```text
 help
@@ -578,7 +616,7 @@ real, accessible Notion page is ready; never a made-up URL.
 
 ---
 
-## 30 · Great on trusted repos. Not a sandbox for hostile code.
+## 32 · Great on trusted repos. Not a sandbox for hostile code.
 
 | Use it for | Not yet |
 | --- | --- |
@@ -591,7 +629,7 @@ Being honest about scope builds more trust than a feature list.
 
 ---
 
-## 31 · Three ideas worth stealing
+## 33 · Three ideas worth stealing
 
 1. Slack is an engineering harness, not just a chat window.
 2. Keep the thinking away from the keys that publish.
@@ -601,7 +639,7 @@ If people remember one thing, it is number two.
 
 ---
 
-## 32 · Before you ship it
+## 34 · Before you ship it
 
 | Owner | When | Do this |
 | --- | --- | --- |
@@ -616,12 +654,13 @@ them in.
 
 ---
 
-## 33 · Keyboard: yes. Keys: never.
+## 35 · Keyboard: yes. Keys: never.
 
-**On screen:** the closing line and a QR code that opens
-`https://github.com/sakomws/slack-agent-runtime`.
+**On screen:** the closing line and two QR codes: one opens
+`https://github.com/sakomws/slack-agent-runtime`, the other
+`https://you.com/product/inference-router`.
 
-Close on the callback to the title, leave the QR code up, then open Q&A.
+Close on the callback to the title, leave the QR codes up, then open Q&A.
 
 ### Q&A prompts
 
