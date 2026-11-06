@@ -219,9 +219,10 @@ async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() 
     )
     instructions = run_kwargs["messages"][0]["content"]
     assert "Define the audience and purpose" in instructions
+    assert "Do not use Markdown tables" in instructions
     assert "Separate facts, assumptions, decisions, and open questions" in instructions
     assert "never invent them" in instructions
-    assert context.say.await_args.kwargs["text"].startswith("## Conclusion")
+    assert context.say.await_args.kwargs["text"].startswith("*Conclusion*")
     client.dispatch.assert_not_awaited()
 
 

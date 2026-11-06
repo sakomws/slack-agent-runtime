@@ -42,6 +42,23 @@ def test_code_formatting_is_not_rewritten() -> None:
     )
 
 
+def test_markdown_tables_become_labeled_bullets() -> None:
+    text = """### Email
+
+| Address | Purpose |
+| --- | --- |
+| services@example.com | Account owner |
+| security@example.com | Incident reports |"""
+
+    assert (
+        to_slack_mrkdwn(text)
+        == """*Email*
+
+• *Address:* services@example.com — *Purpose:* Account owner
+• *Address:* security@example.com — *Purpose:* Incident reports"""
+    )
+
+
 def test_long_messages_split_on_readable_boundaries() -> None:
     chunks = split_slack_message("first paragraph\n\nsecond paragraph", limit=20)
 

@@ -13,7 +13,7 @@ from slack_agent_runtime.domain.commands import HelpEntry
 from slack_agent_runtime.inference.client import InferenceRouterError
 from slack_agent_runtime.plugins.api import CommandContext, PluginRoute
 from slack_agent_runtime.services.agent_runner import AgentLoopError
-from slack_agent_runtime.slack.formatting import split_slack_message
+from slack_agent_runtime.slack.formatting import split_slack_message, to_slack_mrkdwn
 from slack_agent_runtime.slack.ui import mcp_approval_blocks
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ Review and rewrite the retrieved specification using these requirements:
 - Use short paragraphs and descriptive headings.
 - Replace generic language with concrete facts, examples, and decisions.
 - Remove repetition, filler, excessive bullets, and unnecessary summaries.
+- Do not use Markdown tables. Use compact labeled bullets that render in Slack.
 - Explain acronyms and unfamiliar terms once, and keep terminology consistent.
 - Separate facts, assumptions, decisions, and open questions.
 - Add owners, deadlines, and next steps where the source supports them. When they
@@ -227,7 +228,7 @@ class CodingPlugin:
                 thread_ts=context.thread_ts,
             )
             return
-        for chunk in split_slack_message(review):
+        for chunk in split_slack_message(to_slack_mrkdwn(review)):
             await context.say(text=chunk, thread_ts=context.thread_ts)
 
     async def _from_notion(
