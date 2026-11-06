@@ -8,7 +8,11 @@ from slack_agent_runtime.coding.reviewer import (
     PullRequestReviewError,
     parse_review,
 )
-from slack_agent_runtime.inference.client import InferenceResult, InferenceUsage
+from slack_agent_runtime.inference.client import (
+    InferenceResult,
+    InferenceRouterError,
+    InferenceUsage,
+)
 
 
 def _result(content: str) -> InferenceResult:
@@ -49,6 +53,44 @@ async def test_reviewer_returns_structured_blocking_review() -> None:
     messages = client.complete.await_args.kwargs["messages"]
     assert "untrusted data" in messages[0]["content"]
     assert client.complete.await_args.kwargs["model"] == "review-model"
+
+
+@pytest.mark.asyncio
+async def test_reviewer_retries_empty_router_responses(monkeypatch: pytest.MonkeyPatch) -> None:
+    sleep = AsyncMock()
+    monkeypatch.setattr("slack_agent_runtime.coding.reviewer.asyncio.sleep", sleep)
+    client = AsyncMock()
+    client.complete.side_effect = [
+        InferenceRouterError("Inference Router returned an empty response"),
+        _result('{"summary":"Retry succeeded.","findings":[]}'),
+    ]
+
+    review = await PullRequestReviewer(client).review(
+        diff="diff --git a/a.py b/a.py\n+pass",
+        title="Retry review",
+        body="",
+        model="review-model",
+    )
+
+    assert review.summary == "Retry succeeded."
+    assert client.complete.await_count == 2
+    sleep.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_reviewer_does_not_retry_other_router_errors() -> None:
+    client = AsyncMock()
+    client.complete.side_effect = InferenceRouterError("Inference Router request failed")
+
+    with pytest.raises(InferenceRouterError, match="request failed"):
+        await PullRequestReviewer(client).review(
+            diff="diff --git a/a.py b/a.py\n+pass",
+            title="Failed review",
+            body="",
+            model="review-model",
+        )
+
+    client.complete.assert_awaited_once()
 
 
 def test_non_blocking_review_approves_and_redacts_secrets() -> None:
