@@ -434,8 +434,10 @@ Install `examples/coding-job/pr-review.yml` as
 `.github/workflows/pr-review.yml` in every target repository and pin both
 reusable-workflow references to a release tag or commit SHA. Add
 `PR_REVIEW_GITHUB_TOKEN` alongside the inference and Slack secrets. This token
-must belong to a reviewer identity different from the PR author and have
+should belong to a reviewer identity different from the PR author and have
 **Contents: read**, **Pull requests: write**, and **Checks: read** access.
+When the token belongs to the PR author, an approval verdict is safely
+downgraded to a non-approving review comment.
 
 The review process receives only the PR title, body, exact diff, selected
 model, and inference credentials. It treats all PR content as untrusted data

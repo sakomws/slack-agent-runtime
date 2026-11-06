@@ -182,6 +182,20 @@ jobs:
 
           event = str(review["event"])
           reason = "model verdict"
+          reviewer = json.loads(subprocess.run(
+              ["gh", "api", "user"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout)
+          author = current.get("user")
+          if (
+              event == "APPROVE"
+              and isinstance(author, dict)
+              and reviewer.get("login") == author.get("login")
+          ):
+              event = "COMMENT"
+              reason = "review token belongs to the pull request author"
           if event == "APPROVE" and current.get("draft"):
               event = "COMMENT"
               reason = "pull request is draft"
