@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/slack-agent-runtime-logo.svg" alt="Slack Agent Runtime logo: a horse in a harness whose reins lead to a terminal key" width="160">
+</p>
+
 # Slack Agent Runtime
 
 > Turn Slack threads into review-ready pull requests—without giving the AI
