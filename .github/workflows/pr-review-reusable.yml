@@ -180,7 +180,8 @@ jobs:
           if current.get("state") != "open":
               raise SystemExit("pull request is no longer open")
 
-          event = str(review["event"])
+          requested_event = str(review["event"])
+          event = requested_event
           reason = "model verdict"
           reviewer = json.loads(subprocess.run(
               ["gh", "api", "user"],
@@ -190,12 +191,19 @@ jobs:
           ).stdout)
           author = current.get("user")
           if (
-              event == "APPROVE"
+              event in {"APPROVE", "REQUEST_CHANGES"}
               and isinstance(author, dict)
               and reviewer.get("login") == author.get("login")
           ):
               event = "COMMENT"
-              reason = "review token belongs to the pull request author"
+              reason = (
+                  "GitHub does not allow a pull request author to "
+                  + (
+                      "approve their own pull request"
+                      if requested_event == "APPROVE"
+                      else "request changes on their own pull request"
+                  )
+              )
           if event == "APPROVE" and current.get("draft"):
               event = "COMMENT"
               reason = "pull request is draft"
@@ -219,7 +227,9 @@ jobs:
 
           body = str(review["body"])
           if event == "COMMENT" and reason != "model verdict":
-              body += f"\n\n> Approval withheld: {reason}."
+              body += (
+                  f"\n\n> `{requested_event}` was published as `COMMENT`: {reason}."
+              )
           request = {"body": body[:65000], "event": event, "commit_id": expected_sha}
           request_file = Path(os.environ["RUNNER_TEMP"], "review-request.json")
           request_file.write_text(json.dumps(request), encoding="utf-8")
@@ -234,6 +244,8 @@ jobs:
           output = Path(os.environ["GITHUB_OUTPUT"])
           with output.open("a", encoding="utf-8") as stream:
               stream.write(f"event={event}\n")
+              stream.write(f"requested_event={requested_event}\n")
+              stream.write(f"reason={reason}\n")
               stream.write(f"blocking={str(bool(review['blocking'])).lower()}\n")
           PY
 
@@ -255,7 +267,7 @@ jobs:
           payload: |
             channel: ${{ toJSON(inputs.slack_channel) }}
             thread_ts: ${{ toJSON(inputs.slack_thread_ts) }}
-            text: "${{ steps.publish.outputs.event == 'APPROVE' && '✅' || steps.publish.outputs.event == 'REQUEST_CHANGES' && '🚫' || '💬' }} Review completed with `${{ steps.publish.outputs.event }}`: ${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pull_request_number }}"
+            text: ${{ toJSON(steps.publish.outputs.reason == 'model verdict' && format('{0} Review completed with `{1}`: {2}/{3}/pull/{4}', steps.publish.outputs.event == 'APPROVE' && '✅' || steps.publish.outputs.event == 'REQUEST_CHANGES' && '🚫' || '💬', steps.publish.outputs.event, github.server_url, github.repository, inputs.pull_request_number) || format('💬 Review requested `{0}` but was published as `COMMENT`: {1}. {2}/{3}/pull/{4}', steps.publish.outputs.requested_event, steps.publish.outputs.reason, github.server_url, github.repository, inputs.pull_request_number)) }}
 
       - name: Notify Slack of review failure
         if: failure()
