@@ -378,6 +378,10 @@ The target repository is checked out without persisted credentials. The worker
 receives only three inference values: endpoint, API key, and model. It cannot
 see the GitHub token or Slack token.
 
+In this talk, “later step” means a separate GitHub Actions step that starts
+after the untrusted AI worker process has finished. It is not a later tool call
+inside the same model process.
+
 After the worker exits, the workflow validates changed paths and metadata. It
 rejects workflow files, environment files, secret directories, private-key
 formats, an empty diff, or suspicious secret-like worker metadata.
