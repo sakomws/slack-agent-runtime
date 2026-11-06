@@ -1,0 +1,8 @@
+The Slack bot is installed as {{ include "slack-agent-runtime.fullname" . }}.
+
+Check its status:
+  kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl logs deployment/{{ include "slack-agent-runtime.fullname" . }}
+
+The chart intentionally defaults to one replica because Slack Socket Mode
+distributes events across all connections using the same app token.

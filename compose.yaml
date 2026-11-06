@@ -1,0 +1,21 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: slack-agent-runtime:local
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      PORT: "6016"
+    ports:
+      - "127.0.0.1:6016:6016"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

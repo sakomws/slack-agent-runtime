@@ -1,0 +1,26 @@
+"""Narrow Slack types shared by plugins and conversation services."""
+
+from collections.abc import Awaitable, Mapping
+from typing import Any, Protocol, TypeAlias
+
+SlackResponse: TypeAlias = Mapping[str, Any] | object
+
+
+class Say(Protocol):
+    def __call__(self, **kwargs: Any) -> Awaitable[SlackResponse]: ...
+
+
+class SlackClient(Protocol):
+    async def auth_test(self, **kwargs: Any) -> Mapping[str, Any]: ...
+
+    async def chat_delete(self, **kwargs: Any) -> SlackResponse: ...
+
+    async def chat_postEphemeral(self, **kwargs: Any) -> SlackResponse: ...
+
+    async def chat_postMessage(self, **kwargs: Any) -> SlackResponse: ...
+
+    async def chat_update(self, **kwargs: Any) -> SlackResponse: ...
+
+    async def conversations_replies(self, **kwargs: Any) -> Mapping[str, Any]: ...
+
+    async def views_open(self, **kwargs: Any) -> SlackResponse: ...

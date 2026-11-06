@@ -1,0 +1,14 @@
+{
+  "type": "event_callback",
+  "team_id": "T123",
+  "event_id": "Ev124",
+  "event": {
+    "type": "message",
+    "user": "U123",
+    "text": "summarize this",
+    "channel": "D123",
+    "channel_type": "im",
+    "ts": "200.000",
+    "event_ts": "200.000"
+  }
+}

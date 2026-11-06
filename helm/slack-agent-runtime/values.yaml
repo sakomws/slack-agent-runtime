@@ -1,0 +1,111 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/example/slack-agent-runtime
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 6016
+
+config:
+  baseUrl: ""
+  model: ""
+  allowedWorkspaceIds: ""
+  allowedChannelIds: ""
+  allowedUserIds: ""
+  adminUserIds: ""
+  requestLimit: 0
+  requestWindowSeconds: 60
+  tokenBudget: 0
+  tokenWindowSeconds: 3600
+  maxConcurrentRequests: 0
+  streamUpdateIntervalSeconds: 1
+  threadStateBackend: memory
+  plugins: ""
+
+coding:
+  repositories: ""
+  githubApiUrl: https://api.github.com
+  eventType: slack_agent_coding_job
+  workflowFilename: coding-agent.yml
+  maxPromptChars: 8000
+  reviewEventType: slack_agent_pr_review
+  reviewWorkflowFilename: pr-review.yml
+  reviewPageSize: 10
+
+observability:
+  otlpEndpoint: ""
+  otlpInsecure: ""
+  modelPricingJson: ""
+
+mcp:
+  configJson: ""
+  existingConfigMap: ""
+  configKey: mcp.json
+  envFromSecrets: []
+  maxSteps: 8
+  toolTimeoutSeconds: 30
+  approvalTimeoutSeconds: 300
+  maxResultChars: 20000
+
+secret:
+  existingSecret: slack-agent-runtime
+  keys:
+    slackBotToken: SLACK_BOT_TOKEN
+    slackAppToken: SLACK_APP_TOKEN
+    inferenceApiKey: INFERENCE_ROUTER_API_KEY
+    codingGithubToken: SLACK_AGENT_RUNTIME_GITHUB_TOKEN
+    threadStateUrl: THREAD_STATE_URL
+    otlpHeaders: ""
+
+probes:
+  startup:
+    failureThreshold: 30
+    periodSeconds: 2
+  readiness:
+    periodSeconds: 10
+    timeoutSeconds: 3
+  liveness:
+    periodSeconds: 20
+    timeoutSeconds: 3
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

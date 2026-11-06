@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "pullPolicy", "tag"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]},
+        "tag": {"type": "string"}
+      }
+    },
+    "config": {
+      "type": "object",
+      "required": ["baseUrl", "model"],
+      "properties": {
+        "baseUrl": {"type": "string"},
+        "model": {"type": "string"},
+        "requestLimit": {"type": "integer", "minimum": 0},
+        "requestWindowSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "tokenBudget": {"type": "integer", "minimum": 0},
+        "tokenWindowSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "maxConcurrentRequests": {"type": "integer", "minimum": 0},
+        "streamUpdateIntervalSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "plugins": {"type": "string"},
+        "threadStateBackend": {
+          "enum": ["memory", "sqlite", "redis", "postgres"]
+        }
+      }
+    },
+    "coding": {
+      "type": "object",
+      "required": [
+        "repositories",
+        "githubApiUrl",
+        "eventType",
+        "workflowFilename",
+        "maxPromptChars",
+        "reviewEventType",
+        "reviewWorkflowFilename",
+        "reviewPageSize"
+      ],
+      "properties": {
+        "repositories": {"type": "string"},
+        "githubApiUrl": {"type": "string", "minLength": 1},
+        "eventType": {"type": "string", "minLength": 1, "maxLength": 100},
+        "workflowFilename": {"type": "string", "pattern": "^[^/]+\\.ya?ml$"},
+        "maxPromptChars": {"type": "integer", "minimum": 1},
+        "reviewEventType": {"type": "string", "minLength": 1, "maxLength": 100},
+        "reviewWorkflowFilename": {"type": "string", "pattern": "^[^/]+\\.ya?ml$"},
+        "reviewPageSize": {"type": "integer", "minimum": 1, "maximum": 20}
+      }
+    },
+    "secret": {
+      "type": "object",
+      "required": ["existingSecret", "keys"],
+      "properties": {
+        "existingSecret": {"type": "string", "minLength": 1},
+        "keys": {
+          "type": "object",
+          "properties": {
+            "threadStateUrl": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  }
+}

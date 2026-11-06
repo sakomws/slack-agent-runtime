@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run coverage run -m pytest -q
+      - run: uv run coverage report
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Export locked runtime dependencies
+        run: uv export --locked --no-dev --no-hashes --output-file requirements-audit.txt
+      - name: Scan dependencies
+        run: uvx pip-audit --requirement requirements-audit.txt
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+      - name: Lint chart
+        run: >-
+          helm lint helm/slack-agent-runtime
+          --set config.baseUrl=https://api.example.com
+          --set config.model=example-model
+      - name: Render chart
+        run: >-
+          helm template test helm/slack-agent-runtime
+          --set config.baseUrl=https://api.example.com
+          --set config.model=example-model
+          > /tmp/rendered.yaml

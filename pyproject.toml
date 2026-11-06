@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slack-agent-runtime"
+version = "0.2.0"
+description = "A Slack Socket Mode client for an OpenAI-compatible inference endpoint"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "sakomws" }]
+keywords = ["ai", "llm", "slack", "inference", "chatbot"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Framework :: AsyncIO",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Communications :: Chat",
+]
+dependencies = [
+  "aiohttp>=3.10,<4",
+  "brotli>=1.1,<2",
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "mcp>=1.20,<2",
+  "opentelemetry-api>=1.29,<2",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.29,<2",
+  "opentelemetry-sdk>=1.29,<2",
+  "python-dotenv>=1.0,<2",
+  "slack-bolt>=1.22,<2",
+  "slack-sdk>=3.30,<4",
+  "uvicorn>=0.34,<1",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=5,<7"]
+postgres = ["asyncpg>=0.30,<1"]
+persistence = [
+  "asyncpg>=0.30,<1",
+  "redis>=5,<7",
+]
+dev = [
+  "asyncpg>=0.30,<1",
+  "asyncpg-stubs>=0.30,<1",
+  "build>=1.2,<2",
+  "coverage[toml]>=7.6,<8",
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.25,<1",
+  "redis>=5,<7",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+slack-agent = "slack_agent_runtime.entrypoints.cli:main"
+slack-agent-worker = "slack_agent_runtime.entrypoints.coding_worker:main"
+slack-agent-reviewer = "slack_agent_runtime.entrypoints.pr_reviewer:main"
+
+[project.urls]
+Homepage = "https://github.com/sakomws/slack-agent-runtime"
+Repository = "https://github.com/sakomws/slack-agent-runtime"
+Issues = "https://github.com/sakomws/slack-agent-runtime/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["slack_agent_runtime*"]
+
+[tool.setuptools.package-data]
+slack_agent_runtime = ["py.typed"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "ASYNC", "LOG", "TC"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = [
+  "src",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["slack_agent_runtime"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

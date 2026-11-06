@@ -1,0 +1,16 @@
+{
+  "type": "event_callback",
+  "team_id": "T123",
+  "event_id": "Ev126",
+  "event": {
+    "type": "reaction_added",
+    "user": "U123",
+    "reaction": "+1",
+    "item": {
+      "type": "message",
+      "channel": "D123",
+      "ts": "101.000"
+    },
+    "event_ts": "102.000"
+  }
+}

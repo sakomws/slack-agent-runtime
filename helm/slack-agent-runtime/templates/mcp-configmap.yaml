@@ -1,0 +1,11 @@
+{{- if .Values.mcp.configJson }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "slack-agent-runtime.fullname" . }}-mcp
+  labels:
+    {{- include "slack-agent-runtime.labels" . | nindent 4 }}
+data:
+  {{ .Values.mcp.configKey }}: |
+{{ .Values.mcp.configJson | indent 4 }}
+{{- end }}

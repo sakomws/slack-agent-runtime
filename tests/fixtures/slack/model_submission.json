@@ -1,0 +1,21 @@
+{
+  "type": "view_submission",
+  "user": {"id": "U123"},
+  "view": {
+    "callback_id": "assistant.model_select_view",
+    "private_metadata": "{\"channel\":\"C123\",\"thread_ts\":\"100.000\"}",
+    "state": {
+      "values": {
+        "model": {
+          "assistant.model_select": {
+            "type": "static_select",
+            "selected_option": {
+              "text": {"type": "plain_text", "text": "example-model"},
+              "value": "example-model"
+            }
+          }
+        }
+      }
+    }
+  }
+}

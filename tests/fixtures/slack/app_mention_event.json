@@ -1,0 +1,13 @@
+{
+  "type": "event_callback",
+  "team_id": "T123",
+  "event_id": "Ev123",
+  "event": {
+    "type": "app_mention",
+    "user": "U123",
+    "text": "<@UBOT> explain event loops",
+    "channel": "C123",
+    "ts": "100.000",
+    "event_ts": "100.000"
+  }
+}

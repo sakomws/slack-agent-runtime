@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "slack": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_MCP_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_MCP_TEAM_ID}"
+      },
+      "autoApprove": []
+    }
+  }
+}

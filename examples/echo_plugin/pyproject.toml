@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slack-agent-runtime-echo"
+version = "0.2.0"
+description = "Example plugin for Slack Agent Runtime"
+requires-python = ">=3.11"
+dependencies = ["slack-agent-runtime>=0.2.0"]
+
+[project.entry-points."slack_agent_runtime.plugins"]
+echo = "slack_agent_runtime_echo.plugin:create_plugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]

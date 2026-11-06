@@ -1,0 +1,215 @@
+{{- if ne (int .Values.replicaCount) 1 }}
+{{- fail "replicaCount must be 1 because Slack Socket Mode and process-local request state are not horizontally coordinated" }}
+{{- end }}
+{{- $hasMcpConfig := or .Values.mcp.configJson .Values.mcp.existingConfigMap }}
+{{- $mcpConfigMap := .Values.mcp.existingConfigMap | default (printf "%s-mcp" (include "slack-agent-runtime.fullname" .)) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "slack-agent-runtime.fullname" . }}
+  labels:
+    {{- include "slack-agent-runtime.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "slack-agent-runtime.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.mcp.configJson }}
+        checksum/mcp-config: {{ . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "slack-agent-runtime.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "slack-agent-runtime.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bot
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 6016
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "6016"
+            - name: TMPDIR
+              value: /tmp
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" .Values.secret.existingSecret }}
+                  key: {{ .Values.secret.keys.slackBotToken }}
+            - name: SLACK_APP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" .Values.secret.existingSecret }}
+                  key: {{ .Values.secret.keys.slackAppToken }}
+            - name: INFERENCE_ROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" .Values.secret.existingSecret }}
+                  key: {{ .Values.secret.keys.inferenceApiKey }}
+            - name: INFERENCE_ROUTER_BASE_URL
+              value: {{ required "config.baseUrl is required" .Values.config.baseUrl | quote }}
+            - name: INFERENCE_ROUTER_MODEL
+              value: {{ required "config.model is required" .Values.config.model | quote }}
+            - name: SLACK_AGENT_RUNTIME_ALLOWED_WORKSPACE_IDS
+              value: {{ .Values.config.allowedWorkspaceIds | quote }}
+            - name: SLACK_AGENT_RUNTIME_ALLOWED_CHANNEL_IDS
+              value: {{ .Values.config.allowedChannelIds | quote }}
+            - name: SLACK_AGENT_RUNTIME_ALLOWED_USER_IDS
+              value: {{ .Values.config.allowedUserIds | quote }}
+            - name: SLACK_AGENT_RUNTIME_ADMIN_USER_IDS
+              value: {{ .Values.config.adminUserIds | quote }}
+            - name: SLACK_AGENT_RUNTIME_REQUEST_LIMIT
+              value: {{ .Values.config.requestLimit | quote }}
+            - name: SLACK_AGENT_RUNTIME_REQUEST_WINDOW_SECONDS
+              value: {{ .Values.config.requestWindowSeconds | quote }}
+            - name: SLACK_AGENT_RUNTIME_TOKEN_BUDGET
+              value: {{ .Values.config.tokenBudget | quote }}
+            - name: SLACK_AGENT_RUNTIME_TOKEN_WINDOW_SECONDS
+              value: {{ .Values.config.tokenWindowSeconds | quote }}
+            - name: SLACK_AGENT_RUNTIME_MAX_CONCURRENT_REQUESTS
+              value: {{ .Values.config.maxConcurrentRequests | quote }}
+            - name: SLACK_AGENT_RUNTIME_STREAM_UPDATE_INTERVAL_SECONDS
+              value: {{ .Values.config.streamUpdateIntervalSeconds | quote }}
+            - name: THREAD_STATE_BACKEND
+              value: {{ .Values.config.threadStateBackend | quote }}
+            - name: SLACK_AGENT_RUNTIME_PLUGINS
+              value: {{ .Values.config.plugins | quote }}
+            {{- if .Values.coding.repositories }}
+            - name: SLACK_AGENT_RUNTIME_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" .Values.secret.existingSecret }}
+                  key: {{ required "secret.keys.codingGithubToken is required when coding is enabled" .Values.secret.keys.codingGithubToken }}
+            - name: SLACK_AGENT_RUNTIME_CODING_REPOSITORIES
+              value: {{ .Values.coding.repositories | quote }}
+            - name: SLACK_AGENT_RUNTIME_GITHUB_API_URL
+              value: {{ .Values.coding.githubApiUrl | quote }}
+            - name: SLACK_AGENT_RUNTIME_CODING_EVENT_TYPE
+              value: {{ .Values.coding.eventType | quote }}
+            - name: SLACK_AGENT_RUNTIME_CODING_WORKFLOW_FILENAME
+              value: {{ .Values.coding.workflowFilename | quote }}
+            - name: SLACK_AGENT_RUNTIME_CODING_MAX_PROMPT_CHARS
+              value: {{ .Values.coding.maxPromptChars | quote }}
+            - name: SLACK_AGENT_RUNTIME_REVIEW_EVENT_TYPE
+              value: {{ .Values.coding.reviewEventType | quote }}
+            - name: SLACK_AGENT_RUNTIME_REVIEW_WORKFLOW_FILENAME
+              value: {{ .Values.coding.reviewWorkflowFilename | quote }}
+            - name: SLACK_AGENT_RUNTIME_REVIEW_PAGE_SIZE
+              value: {{ .Values.coding.reviewPageSize | quote }}
+            {{- end }}
+            {{- if $hasMcpConfig }}
+            - name: SLACK_AGENT_RUNTIME_MCP_CONFIG
+              value: /etc/slack-agent-runtime/mcp/{{ .Values.mcp.configKey }}
+            {{- end }}
+            - name: SLACK_AGENT_RUNTIME_MCP_MAX_STEPS
+              value: {{ .Values.mcp.maxSteps | quote }}
+            - name: SLACK_AGENT_RUNTIME_MCP_TOOL_TIMEOUT_SECONDS
+              value: {{ .Values.mcp.toolTimeoutSeconds | quote }}
+            - name: SLACK_AGENT_RUNTIME_MCP_APPROVAL_TIMEOUT_SECONDS
+              value: {{ .Values.mcp.approvalTimeoutSeconds | quote }}
+            - name: SLACK_AGENT_RUNTIME_MCP_MAX_RESULT_CHARS
+              value: {{ .Values.mcp.maxResultChars | quote }}
+            {{- if ne .Values.config.threadStateBackend "memory" }}
+            - name: THREAD_STATE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" .Values.secret.existingSecret }}
+                  key: {{ required "secret.keys.threadStateUrl is required for durable persistence" .Values.secret.keys.threadStateUrl }}
+            {{- end }}
+          {{- with .Values.mcp.envFromSecrets }}
+          envFrom:
+            {{- range . }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          {{- end }}
+            {{- with .Values.observability.otlpEndpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.observability.otlpInsecure }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.observability.modelPricingJson }}
+            - name: INFERENCE_ROUTER_MODEL_PRICING_JSON
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.secret.keys.otelHeaders }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secret.existingSecret is required" $.Values.secret.existingSecret }}
+                  key: {{ . }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if $hasMcpConfig }}
+            - name: mcp-config
+              mountPath: /etc/slack-agent-runtime/mcp
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if $hasMcpConfig }}
+        - name: mcp-config
+          configMap:
+            name: {{ $mcpConfigMap }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,15 @@
+{
+  "type": "block_actions",
+  "user": {"id": "U123"},
+  "channel": {"id": "C123"},
+  "trigger_id": "trigger-123",
+  "container": {"type": "message", "thread_ts": "100.000"},
+  "message": {"ts": "101.000", "thread_ts": "100.000"},
+  "actions": [
+    {
+      "type": "button",
+      "action_id": "assistant.web_toggle",
+      "value": "assistant.web_toggle"
+    }
+  ]
+}

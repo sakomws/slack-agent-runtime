@@ -1,0 +1,266 @@
+name: Reusable Slack PR review
+
+on:
+  workflow_call:
+    inputs:
+      job_id:
+        required: true
+        type: string
+      pull_request_number:
+        required: true
+        type: number
+      expected_head_sha:
+        required: true
+        type: string
+      model:
+        required: true
+        type: string
+      slack_channel:
+        required: true
+        type: string
+      slack_thread_ts:
+        required: true
+        type: string
+      require_successful_checks:
+        type: boolean
+        default: true
+      runtime_repository:
+        type: string
+        default: sakomws/slack-agent-runtime
+      runtime_ref:
+        type: string
+        default: main
+    secrets:
+      INFERENCE_ROUTER_BASE_URL:
+        required: true
+      INFERENCE_ROUTER_API_KEY:
+        required: true
+      SLACK_CODING_BOT_TOKEN:
+        required: true
+      PR_REVIEW_GITHUB_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: slack-pr-review-${{ github.repository }}-${{ inputs.pull_request_number }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate review metadata
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          HEAD_SHA: ${{ inputs.expected_head_sha }}
+          MODEL: ${{ inputs.model }}
+          SLACK_CHANNEL: ${{ inputs.slack_channel }}
+          SLACK_THREAD_TS: ${{ inputs.slack_thread_ts }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+
+          checks = {
+              "job_id": (os.environ["JOB_ID"], r"[a-f0-9]{32}"),
+              "head_sha": (os.environ["HEAD_SHA"], r"[a-f0-9]{40}"),
+              "model": (os.environ["MODEL"], r"[A-Za-z0-9._:/-]{1,200}"),
+              "slack_channel": (os.environ["SLACK_CHANNEL"], r"[A-Z0-9]{2,32}"),
+              "slack_thread_ts": (os.environ["SLACK_THREAD_TS"], r"\d{1,20}\.\d{1,20}"),
+          }
+          for name, (value, pattern) in checks.items():
+              if re.fullmatch(pattern, value) is None:
+                  raise SystemExit(f"invalid {name}")
+          PY
+
+      - name: Notify Slack that review started
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
+          payload: |
+            channel: ${{ toJSON(inputs.slack_channel) }}
+            thread_ts: ${{ toJSON(inputs.slack_thread_ts) }}
+            text: "🔎 Review job `${{ inputs.job_id }}` started for `${{ github.repository }}#${{ inputs.pull_request_number }}` using `${{ inputs.model }}`."
+
+      - name: Fetch immutable pull request context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          CONTEXT_FILE: ${{ runner.temp }}/pr-context.json
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$RUNNER_TEMP/pr.json"
+          gh api \
+            -H "Accept: application/vnd.github.v3.diff" \
+            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$RUNNER_TEMP/pr.diff"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          pull_request = json.loads(
+              Path(os.environ["RUNNER_TEMP"], "pr.json").read_text(encoding="utf-8")
+          )
+          head_sha = pull_request.get("head", {}).get("sha")
+          if head_sha != os.environ["EXPECTED_HEAD_SHA"]:
+              raise SystemExit("pull request head changed before review")
+          context = {
+              "title": str(pull_request.get("title") or ""),
+              "body": str(pull_request.get("body") or ""),
+              "diff": Path(os.environ["RUNNER_TEMP"], "pr.diff").read_text(encoding="utf-8"),
+          }
+          Path(os.environ["CONTEXT_FILE"]).write_text(
+              json.dumps(context, ensure_ascii=False),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Check out Slack Agent Runtime
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.runtime_repository }}
+          ref: ${{ inputs.runtime_ref }}
+          path: runtime
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install reviewer
+        run: uv sync --project runtime --frozen
+
+      # The untrusted review process receives no GitHub or Slack credential.
+      - name: Review pull request
+        env:
+          INFERENCE_ROUTER_BASE_URL: ${{ secrets.INFERENCE_ROUTER_BASE_URL }}
+          INFERENCE_ROUTER_API_KEY: ${{ secrets.INFERENCE_ROUTER_API_KEY }}
+          INFERENCE_ROUTER_MODEL: ${{ inputs.model }}
+        run: |
+          uv run --project runtime slack-agent-reviewer \
+            --context-file "$RUNNER_TEMP/pr-context.json" \
+            --output-file "$RUNNER_TEMP/pr-review.json" \
+            --model "$INFERENCE_ROUTER_MODEL"
+
+      # A separate identity verifies the current SHA and publishes the deterministic verdict.
+      - name: Publish GitHub review
+        id: publish
+        env:
+          GH_TOKEN: ${{ secrets.PR_REVIEW_GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          REVIEW_FILE: ${{ runner.temp }}/pr-review.json
+          REQUIRE_CHECKS: ${{ inputs.require_successful_checks }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          number = os.environ["PR_NUMBER"]
+          expected_sha = os.environ["EXPECTED_HEAD_SHA"]
+          review = json.loads(Path(os.environ["REVIEW_FILE"]).read_text(encoding="utf-8"))
+
+          current = json.loads(subprocess.run(
+              ["gh", "api", f"repos/{repository}/pulls/{number}"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout)
+          if current.get("head", {}).get("sha") != expected_sha:
+              raise SystemExit("pull request head changed after review")
+          if current.get("state") != "open":
+              raise SystemExit("pull request is no longer open")
+
+          event = str(review["event"])
+          reason = "model verdict"
+          if event == "APPROVE" and current.get("draft"):
+              event = "COMMENT"
+              reason = "pull request is draft"
+          if event == "APPROVE" and os.environ["REQUIRE_CHECKS"].lower() == "true":
+              checks = subprocess.run(
+                  [
+                      "gh", "pr", "checks", number, "--repo", repository,
+                      "--required", "--json", "name,state",
+                  ],
+                  capture_output=True,
+                  text=True,
+              )
+              try:
+                  check_data = json.loads(checks.stdout) if checks.stdout.strip() else []
+              except ValueError:
+                  check_data = []
+              successful = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+              if not check_data or any(item.get("state") not in successful for item in check_data):
+                  event = "COMMENT"
+                  reason = "required checks are absent, pending, or failing"
+
+          body = str(review["body"])
+          if event == "COMMENT" and reason != "model verdict":
+              body += f"\n\n> Approval withheld: {reason}."
+          request = {"body": body[:65000], "event": event, "commit_id": expected_sha}
+          request_file = Path(os.environ["RUNNER_TEMP"], "review-request.json")
+          request_file.write_text(json.dumps(request), encoding="utf-8")
+          subprocess.run(
+              [
+                  "gh", "api", "--method", "POST",
+                  f"repos/{repository}/pulls/{number}/reviews",
+                  "--input", str(request_file),
+              ],
+              check=True,
+          )
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as stream:
+              stream.write(f"event={event}\n")
+              stream.write(f"blocking={str(bool(review['blocking'])).lower()}\n")
+          PY
+
+      - name: Upload review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-review-${{ inputs.job_id }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/pr-review.json
+
+      - name: Notify Slack of review result
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
+          payload: |
+            channel: ${{ toJSON(inputs.slack_channel) }}
+            thread_ts: ${{ toJSON(inputs.slack_thread_ts) }}
+            text: "${{ steps.publish.outputs.event == 'APPROVE' && '✅' || steps.publish.outputs.event == 'REQUEST_CHANGES' && '🚫' || '💬' }} Review completed with `${{ steps.publish.outputs.event }}`: ${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pull_request_number }}"
+
+      - name: Notify Slack of review failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
+          payload: |
+            channel: ${{ toJSON(inputs.slack_channel) }}
+            thread_ts: ${{ toJSON(inputs.slack_thread_ts) }}
+            text: "❌ Review job `${{ inputs.job_id }}` failed. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}."
+
+      - name: Notify Slack of review cancellation
+        if: cancelled()
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
+          payload: |
+            channel: ${{ toJSON(inputs.slack_channel) }}
+            thread_ts: ${{ toJSON(inputs.slack_thread_ts) }}
+            text: "⚪ Review job `${{ inputs.job_id }}` was cancelled."

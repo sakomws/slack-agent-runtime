@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "notion": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "OPENAPI_MCP_HEADERS": "${NOTION_MCP_HEADERS}"
+      },
+      "autoApprove": []
+    }
+  }
+}

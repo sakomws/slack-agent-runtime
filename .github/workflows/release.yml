@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Normalize image name
+        id: image_name
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "name=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "REGISTRY_IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Validate release versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import tomllib
+          from pathlib import Path
+
+          tag = os.environ["RELEASE_TAG"]
+          if not re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag):
+              raise SystemExit(f"invalid release tag: {tag}")
+          version = tag.removeprefix("v")
+
+          project = tomllib.loads(Path("pyproject.toml").read_text())
+          project_version = project["project"]["version"]
+          chart = Path("helm/slack-agent-runtime/Chart.yaml").read_text()
+
+          def chart_value(name: str) -> str:
+              match = re.search(rf"(?m)^{name}:\s*[\"']?([^\"'\s]+)", chart)
+              if match is None:
+                  raise SystemExit(f"{name} is missing from Chart.yaml")
+              return match.group(1)
+
+          versions = {
+              "tag": version,
+              "pyproject.toml": project_version,
+              "Chart.yaml version": chart_value("version"),
+              "Chart.yaml appVersion": chart_value("appVersion"),
+          }
+          if len(set(versions.values())) != 1:
+              details = ", ".join(f"{name}={value}" for name, value in versions.items())
+              raise SystemExit(f"release versions do not match: {details}")
+          PY
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Test and build Python distributions
+        run: |
+          uv sync --locked --extra dev
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run mypy
+          uv run pytest -q
+          uv build
+
+      - uses: azure/setup-helm@v4
+
+      - name: Build Helm package
+        run: |
+          helm lint helm/slack-agent-runtime \
+            --set config.baseUrl=https://api.example.com \
+            --set config.model=example-model
+          mkdir -p dist/helm
+          helm package helm/slack-agent-runtime --destination dist/helm
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image_name.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+
+      - name: Build and publish image
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate image SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.image_name.outputs.name }}@${{ steps.image.outputs.digest }}
+          format: spdx-json
+          output-file: dist/image.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image and attach SBOM attestation
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          cosign sign --yes "${REGISTRY_IMAGE}@${IMAGE_DIGEST}"
+          cosign attest --yes \
+            --type spdxjson \
+            --predicate dist/image.spdx.json \
+            "${REGISTRY_IMAGE}@${IMAGE_DIGEST}"
+
+      - name: Attest image build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ steps.image_name.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+
+      - name: Create artifact checksums
+        run: |
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          root = Path("dist")
+          artifacts = sorted(
+              path for path in root.rglob("*")
+              if path.is_file() and path.name != "SHA256SUMS"
+          )
+          lines = [
+              f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
+              for path in artifacts
+          ]
+          (root / "SHA256SUMS").write_text("\n".join(lines) + "\n")
+          PY
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/helm/*.tgz
+            dist/image.spdx.json
+            dist/SHA256SUMS
