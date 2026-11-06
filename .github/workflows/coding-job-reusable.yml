@@ -70,7 +70,7 @@ jobs:
           PY
 
       - name: Notify Slack that work started
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -80,14 +80,14 @@ jobs:
             text: "🛠️ Coding job `${{ inputs.job_id }}` started in `${{ github.repository }}`."
 
       - name: Check out target repository without credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: target
           ref: ${{ inputs.base_ref }}
           persist-credentials: false
 
       - name: Check out Slack Agent Runtime
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ inputs.runtime_repository }}
           ref: ${{ inputs.runtime_ref }}
@@ -95,7 +95,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -213,7 +213,7 @@ jobs:
 
       - name: Notify Slack of success
         if: success()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -224,7 +224,7 @@ jobs:
 
       - name: Notify Slack of failure
         if: failure()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -235,7 +235,7 @@ jobs:
 
       - name: Notify Slack of cancellation
         if: cancelled()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}

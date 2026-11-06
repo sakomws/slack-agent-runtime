@@ -78,7 +78,7 @@ jobs:
           PY
 
       - name: Notify Slack that review started
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -121,7 +121,7 @@ jobs:
           PY
 
       - name: Check out Slack Agent Runtime
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ inputs.runtime_repository }}
           ref: ${{ inputs.runtime_ref }}
@@ -129,7 +129,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -239,7 +239,7 @@ jobs:
 
       - name: Upload review evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pr-review-${{ inputs.job_id }}
           retention-days: 14
@@ -248,7 +248,7 @@ jobs:
 
       - name: Notify Slack of review result
         if: success()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -259,7 +259,7 @@ jobs:
 
       - name: Notify Slack of review failure
         if: failure()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -270,7 +270,7 @@ jobs:
 
       - name: Notify Slack of review cancellation
         if: cancelled()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
