@@ -153,6 +153,8 @@ Socket Mode distributes events across all active connections for the same app.
 - `code owner/repository from notion <page URL>` — retrieve a grounded Notion
   specification through MCP, then start a coding job
 - `code status` — show the latest coding job's durable Actions status
+- `spec review from notion <page URL>` — review and rewrite a grounded Notion
+  specification for clarity, completeness, ownership, and next steps
 - `prs owner/repository [open|closed|all|draft] [page N]` — list pull requests
   with review buttons
 - `review owner/repository#number [model MODEL]` — run an independent PR review
@@ -361,6 +363,16 @@ job is created. The normal MCP approval buttons remain mandatory unless the
 operator explicitly configured a read-only tool for automatic approval. The
 normalized requirements are bounded by the coding prompt limit and are not
 stored in thread plugin state.
+
+Review a specification without starting a coding job:
+
+```text
+spec review from notion https://www.notion.so/example-spec
+```
+
+The review leads with its conclusion, separates facts, assumptions, decisions,
+and open questions, identifies missing owners or deadlines without inventing
+them, and returns a revised specification in the Slack thread.
 
 Enable it on the bot with an exact repository allowlist:
 

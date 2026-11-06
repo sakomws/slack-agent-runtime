@@ -30,6 +30,10 @@ def _handler(plugin: CodingPlugin):
     return plugin.routes[0].handler
 
 
+def _spec_handler(plugin: CodingPlugin):
+    return plugin.routes[1].handler
+
+
 @pytest.mark.asyncio
 async def test_coding_command_is_admin_only_and_enforces_allowlist() -> None:
     client = AsyncMock()
@@ -162,3 +166,68 @@ async def test_notion_source_requires_valid_url_and_configured_server() -> None:
     await _handler(CodingPlugin(client, policy=None, max_prompt_chars=1_000))(missing)
     assert "not configured" in missing.say.await_args.kwargs["text"]
     client.dispatch.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_spec_review_uses_grounded_notion_tools_and_editorial_checklist() -> None:
+    client = AsyncMock()
+    client.allowed_repositories = frozenset({"owner/repo"})
+    runner = AsyncMock()
+    runner.run.return_value = InferenceResult(
+        "## Conclusion\nRewrite the opening.\n\n## Facts\n- Launch date is documented.",
+        "model",
+        "request",
+        10,
+        InferenceUsage(),
+    )
+    notion_tool = McpTool(
+        "mcp__notion__fetch",
+        "notion",
+        "fetch",
+        "Fetch page",
+        {},
+        read_only=True,
+        auto_approved=False,
+    )
+    context = _context("spec review from notion https://www.notion.so/spec-123")
+    plugin = CodingPlugin(
+        client,
+        policy=None,
+        max_prompt_chars=8_000,
+        agent_runner=runner,
+        mcp_manager=SimpleNamespace(tools=(notion_tool,)),
+    )
+
+    await _spec_handler(plugin)(context)
+
+    run_kwargs = runner.run.await_args.kwargs
+    assert run_kwargs["allowed_tool_names"] == frozenset({"mcp__notion__fetch"})
+    assert run_kwargs["required_tool_names"] == frozenset({"mcp__notion__fetch"})
+    instructions = run_kwargs["messages"][0]["content"]
+    assert "Define the audience and purpose" in instructions
+    assert "Separate facts, assumptions, decisions, and open questions" in instructions
+    assert "never invent them" in instructions
+    assert context.say.await_args.kwargs["text"].startswith("## Conclusion")
+    client.dispatch.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_spec_review_validates_syntax_and_admin_access() -> None:
+    client = AsyncMock()
+    client.allowed_repositories = frozenset({"owner/repo"})
+    plugin = CodingPlugin(
+        client,
+        policy=InMemoryPolicy(PolicyConfig(admin_user_ids=frozenset({"admin"}))),
+        max_prompt_chars=8_000,
+    )
+
+    denied = _context(
+        "spec review from notion https://www.notion.so/spec-123",
+        user_id="member",
+    )
+    await _spec_handler(plugin)(denied)
+    assert "administrator" in denied.say.await_args.kwargs["text"]
+
+    invalid = _context("spec review https://www.notion.so/spec-123")
+    await _spec_handler(plugin)(invalid)
+    assert invalid.say.await_args.kwargs["text"] == ("Use `spec review from notion <page URL>`.")
