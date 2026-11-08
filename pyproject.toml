@@ -60,6 +60,7 @@ dev = [
 slack-agent = "slack_agent_runtime.entrypoints.cli:main"
 slack-agent-worker = "slack_agent_runtime.entrypoints.coding_worker:main"
 slack-agent-reviewer = "slack_agent_runtime.entrypoints.pr_reviewer:main"
+slack-agent-security-audit = "slack_agent_runtime.entrypoints.security_audit_worker:main"
 
 [project.urls]
 Homepage = "https://github.com/sakomws/slack-agent-runtime"

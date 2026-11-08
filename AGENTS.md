@@ -23,7 +23,7 @@ All installable code belongs under `src/slack_agent_runtime/`.
   (stdio) and Streamable HTTP sessions, tool discovery, bounded execution, and
   process-local approvals.
 - `coding/` contains allowlisted GitHub dispatch/status access and bounded
-  coding and review workers.
+  coding, review, and source-only security-audit workers.
 - `services/` separates conversation coordination, command execution,
   completion execution, and thread-state access. Services do not read the
   environment.
@@ -106,6 +106,18 @@ All installable code belongs under `src/slack_agent_runtime/`.
 - Derive approve, comment, or request-changes behavior from finding severity in
   code. Never accept model-authored control text as the verdict.
 - Never merge a pull request.
+
+## Security audits
+
+- Pin third-party skills to an exact reviewed commit.
+- Keep target source read-only and all canonical reports outside the checkout.
+- Audit agents receive inference credentials only and never receive GitHub or
+  Slack credentials.
+- Do not expose target-code execution to source-only audits. Missing runtime
+  or deployment evidence remains `needs_validation`.
+- Use fresh model contexts for hunting and independent verification.
+- Run upstream machine-readable validators before uploading reports.
+- Reject secret-like report content and post only the workflow link to Slack.
 
 ## Required validation
 

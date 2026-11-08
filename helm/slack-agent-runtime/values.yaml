@@ -62,6 +62,8 @@ coding:
   reviewEventType: slack_agent_pr_review
   reviewWorkflowFilename: pr-review.yml
   reviewPageSize: 10
+  securityAuditEventType: slack_agent_security_audit
+  securityAuditWorkflowFilename: security-audit.yml
 
 observability:
   otlpEndpoint: ""

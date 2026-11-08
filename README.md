@@ -225,6 +225,12 @@ Socket Mode distributes events across all active connections for the same app.
 - `review owner/repository#number [model MODEL]` or `review https://github.com/owner/repository/pull/number [model MODEL]` — run an independent PR review
 - `review status` — show the latest review workflow status
 
+### Security audits
+
+- `security audit owner/repository or GitHub repository URL [profile quick|standard|deep] [budget N] [scope PATH]` — run a source-first security audit in GitHub Actions
+- `security audit status` — show the latest security audit workflow status
+- `security audit findings` — open the completed run and download its validated report
+
 All settings are scoped per thread. `default` removes an override.
 Anyone may inspect settings and available models. Changing the model, web
 search, streaming, usage display, or generation parameters requires a user ID listed in
@@ -539,6 +545,43 @@ with high security or regulatory risk should disable automatic approval by
 keeping required checks unsatisfied or adapting the wrapper to comment-only.
 PR titles and metadata are visible in the Slack channel where `prs` is run;
 keep repository, workspace, channel, user, and administrator allowlists narrow.
+
+## Skill-driven security audits
+
+Administrators can run the pinned
+[Cloudflare security-audit skill](https://github.com/cloudflare/security-audit-skill)
+against an allowlisted repository:
+
+```text
+security audit owner/repository profile quick budget 12
+security audit status
+security audit findings
+```
+
+Copy `examples/coding-job/security-audit.yml` to
+`.github/workflows/security-audit.yml` in each target repository. It uses the
+same inference and Slack secrets as coding jobs. Pin the reusable workflow and
+`runtime_ref` to a release tag or commit SHA in production.
+
+The reusable workflow pins the upstream skill to commit
+`c1c8a8c1471069fb0e188eeaff69b8e8db6564a8`. A provider-neutral parent agent
+follows the skill's six phases and delegates reconnaissance, hunting,
+validation, coverage criticism, and final-record verification to fresh model
+contexts. Independent calls are run concurrently when the parent batches them.
+The requested budget limits delegated agent invocations to 8–64.
+
+The audit is deliberately source-only. Its worker receives inference
+credentials but no GitHub or Slack token, exposes no command-execution or
+write-to-repository tool, and cannot read environment files, private keys, or
+Git metadata. Findings that require target execution or deployment facts must
+remain `needs_validation`. Later credentialed steps run the skill's
+machine-readable validators, reject secret-like report content, upload the
+seven canonical report files as a 30-day Actions artifact, and post only the
+workflow link to Slack.
+
+This integration does not replace a penetration test or human risk acceptance.
+The audited source is sent to the configured inference provider, so enable it
+only for repositories whose data policy permits that processing.
 
 Web search uses the Inference Router's `web_search` server tool. Search results
 include extracted highlights, and Markdown citations are converted to Slack

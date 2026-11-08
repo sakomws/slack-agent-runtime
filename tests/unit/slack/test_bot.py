@@ -75,11 +75,12 @@ def test_coding_plugin_is_opt_in(
 
     bot = SlackAgentRuntime(settings, inference_client=AsyncMock())
 
-    assert tuple(plugin.name for plugin in bot._plugins.plugins)[-2:] == (
+    assert tuple(plugin.name for plugin in bot._plugins.plugins)[-3:] == (
         "coding",
         "reviews",
+        "security_audit",
     )
-    assert github_client_factory.call_count == 2
+    assert github_client_factory.call_count == 3
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,10 @@
 # Target repository setup
 
-Copy `coding-agent.yml` to `.github/workflows/coding-agent.yml` and
-`pr-review.yml` to `.github/workflows/pr-review.yml` in each trusted target
-repository. Pin `runtime_ref` and both reusable-workflow references to a release
-tag or commit SHA for production.
+Copy `coding-agent.yml` to `.github/workflows/coding-agent.yml`,
+`pr-review.yml` to `.github/workflows/pr-review.yml`, and
+`security-audit.yml` to `.github/workflows/security-audit.yml` in each trusted
+target repository. Pin `runtime_ref` and all reusable-workflow references to a
+release tag or commit SHA for production.
 
 Add these repository Actions secrets:
 
@@ -25,3 +26,9 @@ are successful, and otherwise leaves a comment. It never merges.
 
 The repository-dispatch payload and Actions logs are visible to people who can read the
 repository. Install this workflow only in repositories whose code and collaborators are trusted.
+
+The security-audit workflow is read-only and uses the same inference and Slack
+secrets. It runs the pinned Cloudflare security-audit skill without exposing a
+target-code execution tool, validates `findings.json` and
+`coverage-ledger.json`, and uploads the canonical reports as an Actions
+artifact. Repository source is sent to the configured inference provider.

@@ -119,6 +119,10 @@ spec:
               value: {{ .Values.coding.reviewWorkflowFilename | quote }}
             - name: SLACK_AGENT_RUNTIME_REVIEW_PAGE_SIZE
               value: {{ .Values.coding.reviewPageSize | quote }}
+            - name: SLACK_AGENT_RUNTIME_SECURITY_AUDIT_EVENT_TYPE
+              value: {{ .Values.coding.securityAuditEventType | quote }}
+            - name: SLACK_AGENT_RUNTIME_SECURITY_AUDIT_WORKFLOW_FILENAME
+              value: {{ .Values.coding.securityAuditWorkflowFilename | quote }}
             {{- end }}
             {{- if $hasMcpConfig }}
             - name: SLACK_AGENT_RUNTIME_MCP_CONFIG

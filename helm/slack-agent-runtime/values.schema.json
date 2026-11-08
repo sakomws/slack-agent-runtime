@@ -44,7 +44,9 @@
         "maxPromptChars",
         "reviewEventType",
         "reviewWorkflowFilename",
-        "reviewPageSize"
+        "reviewPageSize",
+        "securityAuditEventType",
+        "securityAuditWorkflowFilename"
       ],
       "properties": {
         "repositories": {"type": "string"},
@@ -54,7 +56,9 @@
         "maxPromptChars": {"type": "integer", "minimum": 1},
         "reviewEventType": {"type": "string", "minLength": 1, "maxLength": 100},
         "reviewWorkflowFilename": {"type": "string", "pattern": "^[^/]+\\.ya?ml$"},
-        "reviewPageSize": {"type": "integer", "minimum": 1, "maximum": 20}
+        "reviewPageSize": {"type": "integer", "minimum": 1, "maximum": 20},
+        "securityAuditEventType": {"type": "string", "minLength": 1, "maxLength": 100},
+        "securityAuditWorkflowFilename": {"type": "string", "pattern": "^[^/]+\\.ya?ml$"}
       }
     },
     "secret": {

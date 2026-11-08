@@ -39,7 +39,8 @@ changes.
   uses You.com for inference and search.
 - MCP servers provide governed access to Notion, Linear, Slack, GitHub, and
   You.com tools when configured.
-- GitHub Actions executes bounded coding and pull-request review workers.
+- GitHub Actions executes bounded coding, pull-request review, and source-only
+  security-audit workers.
 - GitHub stores branches, commits, diffs, reviews, and pull requests.
 - Generated pull requests require human review and are never auto-merged.
 
@@ -71,7 +72,8 @@ changes.
 Slack Agent Runtime is an asynchronous Python service that connects Slack
 Socket Mode to an OpenAI-compatible inference endpoint. It supports threaded
 conversation, model and generation controls, direct MCP tools, specification
-review, GitHub coding jobs, and independent pull-request reviews.
+review, GitHub coding jobs, independent pull-request reviews, and skill-driven
+source security audits.
 
 The system uses Slack as the human interaction harness, MCP as the governed
 data layer, GitHub Actions as bounded execution, and GitHub as the durable
@@ -101,6 +103,8 @@ model execution, credentialed publication, and human approval.
 - Grounded Notion specification review and coding-job dispatch.
 - Allowlisted GitHub coding jobs that create reviewable pull requests.
 - Independent pull-request review with deterministic publication policy.
+- Source-only security audits using a pinned Cloudflare skill, fresh model
+  contexts, validated findings, and GitHub Actions report artifacts.
 - Typed plugin contracts and explicit plugin loading.
 - Local, Docker, Compose, and single-replica Helm deployment.
 - Structured logs, OpenTelemetry traces and metrics, release artifacts,
@@ -292,8 +296,9 @@ Retain the existing five-part architecture:
    coding dispatch, and review dispatch.
 3. **MCP data layer:** provides approved access to external sources including
    Notion, Linear, Slack, GitHub, and You.com.
-4. **GitHub Actions bounded execution:** runs coding or review workers with
-   finite rounds, commands, file changes, diff size, and time.
+4. **GitHub Actions bounded execution:** runs coding, review, or source-audit
+   workers with finite rounds, agent calls, commands, file changes, diff size,
+   and time as applicable.
 5. **GitHub code-artifact layer:** stores commits, branches, pull requests,
    reviews, checks, and durable job status.
 
@@ -315,11 +320,12 @@ The Python package layout under `src/slack_agent_runtime/` is:
 - `services/`: conversation, command, completion, agent-loop, and thread-state
   coordination.
 - `mcp/`: configuration, sessions, discovery, tool bounds, and approvals.
-- `coding/`: GitHub dispatch, bounded workspace tools, coding worker, and
-  structured reviewer.
+- `coding/`: GitHub dispatch, bounded workspace tools, coding worker,
+  structured reviewer, and source-only security-audit orchestrator.
 - `plugins/`: typed plugin contracts, registry, lifecycle, and built-ins.
 - `storage/`: versioned persistence contracts and adapters.
-- `entrypoints/`: CLI, coding worker, reviewer, and ASGI lifecycles.
+- `entrypoints/`: CLI, coding worker, reviewer, security-audit worker, and ASGI
+  lifecycles.
 
 ### Conversation flow
 
@@ -350,6 +356,21 @@ The Python package layout under `src/slack_agent_runtime/` is:
 4. A credentialed publisher rechecks the head SHA and repository state.
 5. Deterministic code derives `APPROVE`, `COMMENT`, or `REQUEST_CHANGES`.
 6. GitHub receives the review and Slack receives the result or failure reason.
+
+### Security-audit flow
+
+1. An administrator selects an allowlisted repository, profile, agent budget,
+   and optional repository-relative scope.
+2. The runtime dispatches a security-audit workflow and stores only its durable
+   pointer in thread state.
+3. GitHub Actions checks out the target, runtime, and the Cloudflare
+   security-audit skill pinned to an exact commit.
+4. An inference-only parent follows the six skill phases and delegates
+   independent work to fresh read-only model contexts.
+5. The worker exposes source and skill reading plus canonical report writes,
+   but no target-code execution or repository-write tool.
+6. Later trusted steps run both upstream validators, reject secret-like output,
+   upload the seven canonical reports, and post the workflow link to Slack.
 
 ## Pros
 

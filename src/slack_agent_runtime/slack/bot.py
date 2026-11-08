@@ -26,6 +26,7 @@ from slack_agent_runtime.plugins.coding import CodingPlugin
 from slack_agent_runtime.plugins.mcp import McpPlugin
 from slack_agent_runtime.plugins.registry import load_plugin_registry
 from slack_agent_runtime.plugins.reviews import PullRequestReviewPlugin
+from slack_agent_runtime.plugins.security_audit import SecurityAuditPlugin
 from slack_agent_runtime.services.agent_runner import AgentRunner
 from slack_agent_runtime.services.conversation_coordinator import (
     ConversationCoordinator,
@@ -98,6 +99,7 @@ class SlackAgentRuntime:
         )
         coding_plugin = None
         review_plugin = None
+        security_audit_plugin = None
         if settings.coding_github_token:
             coding_plugin = CodingPlugin(
                 GitHubCodingClient(
@@ -126,6 +128,18 @@ class SlackAgentRuntime:
                 workflow_filename=settings.review_workflow_filename,
                 page_size=settings.review_page_size,
             )
+            security_audit_plugin = SecurityAuditPlugin(
+                GitHubCodingClient(
+                    token=settings.coding_github_token,
+                    allowed_repositories=settings.coding_repositories,
+                    api_url=settings.coding_github_api_url,
+                    event_type=settings.security_audit_event_type,
+                    workflow_filename=settings.security_audit_workflow_filename,
+                ),
+                policy=policy,
+                event_type=settings.security_audit_event_type,
+                workflow_filename=settings.security_audit_workflow_filename,
+            )
         dependencies = build_conversation_dependencies(
             self._inference_client,
             default_model=settings.model,
@@ -147,7 +161,12 @@ class SlackAgentRuntime:
                 dependencies,
                 additional=tuple(
                     plugin
-                    for plugin in (mcp_plugin, coding_plugin, review_plugin)
+                    for plugin in (
+                        mcp_plugin,
+                        coding_plugin,
+                        review_plugin,
+                        security_audit_plugin,
+                    )
                     if plugin is not None
                 ),
             ),

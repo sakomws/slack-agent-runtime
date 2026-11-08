@@ -100,9 +100,11 @@ sends `repository_dispatch` events, lists PRs, and reads Actions runs;
 PR-writing credentials stay inside each target repository's workflow. Install
 the target workflow and repository secrets as described in
 [`examples/coding-job/README.md`](../../examples/coding-job/README.md).
-The same allowlist enables admin-only `prs` and `review` Slack commands. Review
-publication uses the separate `PR_REVIEW_GITHUB_TOKEN` stored in each target
-repository, never in this Helm release.
+The same allowlist enables admin-only `prs`, `review`, and `security audit`
+Slack commands. Review publication uses the separate
+`PR_REVIEW_GITHUB_TOKEN` stored in each target repository, never in this Helm
+release. Security audits are source-only Actions jobs and use the target
+repository's inference and Slack secrets.
 
 OpenTelemetry export can be enabled with:
 

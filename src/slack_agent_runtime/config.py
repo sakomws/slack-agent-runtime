@@ -110,6 +110,8 @@ class SlackAgentRuntimeSettings:
     review_event_type: str = "slack_agent_pr_review"
     review_workflow_filename: str = "pr-review.yml"
     review_page_size: int = 10
+    security_audit_event_type: str = "slack_agent_security_audit"
+    security_audit_workflow_filename: str = "security-audit.yml"
 
     @property
     def policy_config(self) -> PolicyConfig:
@@ -178,6 +180,22 @@ class SlackAgentRuntimeSettings:
         )
         if review_page_size > 20:
             raise RuntimeError("SLACK_AGENT_RUNTIME_REVIEW_PAGE_SIZE cannot exceed 20")
+        security_audit_event_type = os.getenv(
+            "SLACK_AGENT_RUNTIME_SECURITY_AUDIT_EVENT_TYPE",
+            "slack_agent_security_audit",
+        ).strip()
+        if _EVENT_TYPE.fullmatch(security_audit_event_type) is None:
+            raise RuntimeError("SLACK_AGENT_RUNTIME_SECURITY_AUDIT_EVENT_TYPE is invalid")
+        security_audit_workflow_filename = os.getenv(
+            "SLACK_AGENT_RUNTIME_SECURITY_AUDIT_WORKFLOW_FILENAME",
+            "security-audit.yml",
+        ).strip()
+        if (
+            not security_audit_workflow_filename
+            or "/" in security_audit_workflow_filename
+            or not security_audit_workflow_filename.endswith((".yml", ".yaml"))
+        ):
+            raise RuntimeError("SLACK_AGENT_RUNTIME_SECURITY_AUDIT_WORKFLOW_FILENAME is invalid")
         return cls(
             slack_bot_token=_required("SLACK_BOT_TOKEN"),
             slack_app_token=_required("SLACK_APP_TOKEN"),
@@ -239,4 +257,6 @@ class SlackAgentRuntimeSettings:
             review_event_type=review_event_type,
             review_workflow_filename=review_workflow_filename,
             review_page_size=review_page_size,
+            security_audit_event_type=security_audit_event_type,
+            security_audit_workflow_filename=security_audit_workflow_filename,
         )

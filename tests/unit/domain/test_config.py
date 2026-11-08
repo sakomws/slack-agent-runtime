@@ -86,6 +86,8 @@ def test_settings_load_coding_layer(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.review_event_type == "slack_agent_pr_review"
     assert settings.review_workflow_filename == "pr-review.yml"
     assert settings.review_page_size == 10
+    assert settings.security_audit_event_type == "slack_agent_security_audit"
+    assert settings.security_audit_workflow_filename == "security-audit.yml"
 
 
 def test_settings_require_coding_token_and_allowlist_together(
