@@ -127,3 +127,46 @@ async def test_security_audit_worker_requires_complete_artifact_set(tmp_path: Pa
             scope=".",
             model="model",
         )
+
+
+@pytest.mark.asyncio
+async def test_security_audit_worker_runs_pinned_validators_with_sanitized_env(
+    tmp_path: Path,
+) -> None:
+    target, skill = _roots(tmp_path)
+    output = tmp_path / "output"
+    output.mkdir()
+    (output / "findings.json").write_text("[]\n", encoding="utf-8")
+    (output / "coverage-ledger.json").write_text("[]\n", encoding="utf-8")
+    validator = (
+        "if (process.env.INFERENCE_ROUTER_API_KEY) process.exit(2);\nconsole.log('valid');\n"
+    )
+    (skill / "validate-findings.cjs").write_text(validator, encoding="utf-8")
+    (skill / "validate-coverage-ledger.cjs").write_text(validator, encoding="utf-8")
+    worker = SecurityAuditWorker(
+        AsyncMock(),
+        target=target,
+        skill_dir=skill,
+        output_dir=output,
+    )
+
+    result = await worker._run_validators()
+
+    assert result.count("exit_code=0") == 2
+    assert result.count("\nvalid\n") == 2
+
+
+@pytest.mark.asyncio
+async def test_security_audit_worker_reports_missing_validator_input(tmp_path: Path) -> None:
+    target, skill = _roots(tmp_path)
+    output = tmp_path / "output"
+    output.mkdir()
+    worker = SecurityAuditWorker(
+        AsyncMock(),
+        target=target,
+        skill_dir=skill,
+        output_dir=output,
+    )
+
+    with pytest.raises(SecurityAuditError, match="input is missing"):
+        await worker._run_validators()
