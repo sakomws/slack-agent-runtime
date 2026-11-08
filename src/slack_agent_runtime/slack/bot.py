@@ -76,10 +76,27 @@ class SlackAgentRuntime:
         )
         state_persistence = persistence or MemoryThreadStatePersistence()
         policy = InMemoryPolicy(settings.policy_config)
+        selected_builtins = settings.builtin_plugins
+
+        def builtin_enabled(name: str, *, available: bool, requirement: str) -> bool:
+            if selected_builtins is None:
+                return available
+            if name not in selected_builtins:
+                return False
+            if not available:
+                raise RuntimeError(f"Built-in plugin `{name}` requires {requirement}")
+            return True
+
+        mcp_requested = selected_builtins is None or "mcp" in selected_builtins
         mcp_manager = McpManager(
-            load_mcp_config(settings.mcp_config_path),
+            load_mcp_config(settings.mcp_config_path if mcp_requested else ""),
             tool_timeout_seconds=settings.mcp_tool_timeout_seconds,
             max_result_chars=settings.mcp_max_result_chars,
+        )
+        mcp_enabled = builtin_enabled(
+            "mcp",
+            available=mcp_manager.enabled,
+            requirement="SLACK_AGENT_RUNTIME_MCP_CONFIG with at least one server",
         )
         approvals = ApprovalBroker(
             timeout_seconds=settings.mcp_approval_timeout_seconds,
@@ -91,16 +108,21 @@ class SlackAgentRuntime:
                 approvals,
                 max_steps=settings.mcp_max_steps,
             )
-            if mcp_manager.enabled
+            if mcp_enabled
             else None
         )
-        mcp_plugin = (
-            McpPlugin(mcp_manager, approvals, policy=policy) if mcp_manager.enabled else None
-        )
+        mcp_plugin = McpPlugin(mcp_manager, approvals, policy=policy) if mcp_enabled else None
         coding_plugin = None
         review_plugin = None
         security_audit_plugin = None
-        if settings.coding_github_token:
+        github_available = bool(settings.coding_github_token)
+        if builtin_enabled(
+            "coding",
+            available=github_available,
+            requirement=(
+                "SLACK_AGENT_RUNTIME_GITHUB_TOKEN and SLACK_AGENT_RUNTIME_CODING_REPOSITORIES"
+            ),
+        ):
             coding_plugin = CodingPlugin(
                 GitHubCodingClient(
                     token=settings.coding_github_token,
@@ -112,8 +134,15 @@ class SlackAgentRuntime:
                 policy=policy,
                 max_prompt_chars=settings.coding_max_prompt_chars,
                 agent_runner=agent_runner,
-                mcp_manager=mcp_manager if mcp_manager.enabled else None,
+                mcp_manager=mcp_manager if mcp_enabled else None,
             )
+        if builtin_enabled(
+            "reviews",
+            available=github_available,
+            requirement=(
+                "SLACK_AGENT_RUNTIME_GITHUB_TOKEN and SLACK_AGENT_RUNTIME_CODING_REPOSITORIES"
+            ),
+        ):
             review_plugin = PullRequestReviewPlugin(
                 GitHubCodingClient(
                     token=settings.coding_github_token,
@@ -128,6 +157,13 @@ class SlackAgentRuntime:
                 workflow_filename=settings.review_workflow_filename,
                 page_size=settings.review_page_size,
             )
+        if builtin_enabled(
+            "security_audit",
+            available=github_available,
+            requirement=(
+                "SLACK_AGENT_RUNTIME_GITHUB_TOKEN and SLACK_AGENT_RUNTIME_CODING_REPOSITORIES"
+            ),
+        ):
             security_audit_plugin = SecurityAuditPlugin(
                 GitHubCodingClient(
                     token=settings.coding_github_token,

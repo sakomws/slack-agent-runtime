@@ -34,6 +34,69 @@ def test_settings_preserve_unique_plugin_order(monkeypatch: pytest.MonkeyPatch) 
     assert settings.plugins == ("echo", "incidents")
 
 
+@pytest.mark.parametrize("value", [None, "auto", " AUTO "])
+def test_settings_default_builtin_plugins_to_auto(
+    monkeypatch: pytest.MonkeyPatch,
+    value: str | None,
+) -> None:
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    monkeypatch.setenv("SLACK_APP_TOKEN", "xapp-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_API_KEY", "api-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_BASE_URL", "https://api.example.com")
+    monkeypatch.setenv("INFERENCE_ROUTER_MODEL", "default-model")
+    if value is None:
+        monkeypatch.delenv("SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS", raising=False)
+    else:
+        monkeypatch.setenv("SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS", value)
+
+    settings = SlackAgentRuntimeSettings.from_env()
+
+    assert settings.builtin_plugins is None
+
+
+def test_settings_load_selected_builtin_plugins(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    monkeypatch.setenv("SLACK_APP_TOKEN", "xapp-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_API_KEY", "api-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_BASE_URL", "https://api.example.com")
+    monkeypatch.setenv("INFERENCE_ROUTER_MODEL", "default-model")
+    monkeypatch.setenv(
+        "SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS",
+        " Reviews,security_audit,reviews ",
+    )
+
+    settings = SlackAgentRuntimeSettings.from_env()
+
+    assert settings.builtin_plugins == ("reviews", "security_audit")
+
+
+def test_settings_allow_disabling_all_optional_builtins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    monkeypatch.setenv("SLACK_APP_TOKEN", "xapp-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_API_KEY", "api-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_BASE_URL", "https://api.example.com")
+    monkeypatch.setenv("INFERENCE_ROUTER_MODEL", "default-model")
+    monkeypatch.setenv("SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS", "")
+
+    settings = SlackAgentRuntimeSettings.from_env()
+
+    assert settings.builtin_plugins == ()
+
+
+def test_settings_reject_unknown_builtin_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    monkeypatch.setenv("SLACK_APP_TOKEN", "xapp-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_API_KEY", "api-test")
+    monkeypatch.setenv("INFERENCE_ROUTER_BASE_URL", "https://api.example.com")
+    monkeypatch.setenv("INFERENCE_ROUTER_MODEL", "default-model")
+    monkeypatch.setenv("SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS", "coding,unknown")
+
+    with pytest.raises(RuntimeError, match="must contain only"):
+        SlackAgentRuntimeSettings.from_env()
+
+
 def test_settings_load_mcp_limits(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     monkeypatch.setenv("SLACK_APP_TOKEN", "xapp-test")

@@ -37,6 +37,17 @@ config:
 Only explicitly listed plugins load. A missing or broken selected plugin fails
 startup so the health probes do not report a partially configured bot.
 
+Optional built-ins default to configuration-driven `auto` mode. Select a
+subset or disable them all with an explicit empty string:
+
+```yaml
+config:
+  builtinPlugins: mcp,reviews
+```
+
+Valid names are `mcp`, `coding`, `reviews`, and `security_audit`. Core command,
+conversation, feedback, and assistant plugins cannot be disabled.
+
 To retain thread history and settings in Redis or PostgreSQL, add the DSN to
 the Secret and select the backend:
 

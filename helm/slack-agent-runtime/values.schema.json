@@ -29,6 +29,7 @@
         "maxConcurrentRequests": {"type": "integer", "minimum": 0},
         "streamUpdateIntervalSeconds": {"type": "number", "exclusiveMinimum": 0},
         "plugins": {"type": "string"},
+        "builtinPlugins": {"type": "string"},
         "threadStateBackend": {
           "enum": ["memory", "sqlite", "redis", "postgres"]
         }

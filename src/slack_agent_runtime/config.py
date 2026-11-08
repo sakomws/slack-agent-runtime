@@ -9,6 +9,7 @@ from slack_agent_runtime.domain.policy import PolicyConfig
 
 _REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _EVENT_TYPE = re.compile(r"^[A-Za-z0-9_.-]{1,100}$")
+_OPTIONAL_BUILTIN_PLUGINS = frozenset({"mcp", "coding", "reviews", "security_audit"})
 
 
 def _value(*names: str) -> str:
@@ -34,6 +35,18 @@ def _id_set(*names: str) -> frozenset[str]:
 def _name_list(*names: str) -> tuple[str, ...]:
     values = (item.strip().lower() for item in _value(*names).split(","))
     return tuple(dict.fromkeys(item for item in values if item))
+
+
+def _builtin_plugin_list(name: str) -> tuple[str, ...] | None:
+    raw = os.getenv(name)
+    if raw is None or raw.strip().lower() == "auto":
+        return None
+    values = tuple(dict.fromkeys(item.strip().lower() for item in raw.split(",") if item.strip()))
+    unknown = set(values) - _OPTIONAL_BUILTIN_PLUGINS
+    if unknown:
+        allowed = ", ".join(sorted(_OPTIONAL_BUILTIN_PLUGINS))
+        raise RuntimeError(f"{name} must contain only: {allowed}")
+    return values
 
 
 def _repository_set(name: str) -> frozenset[str]:
@@ -96,6 +109,7 @@ class SlackAgentRuntimeSettings:
     thread_state_backend: str = "memory"
     thread_state_url: str = ""
     plugins: tuple[str, ...] = ()
+    builtin_plugins: tuple[str, ...] | None = None
     mcp_config_path: str = ""
     mcp_max_steps: int = 8
     mcp_tool_timeout_seconds: float = 30.0
@@ -226,6 +240,7 @@ class SlackAgentRuntimeSettings:
             thread_state_backend=thread_state_backend,
             thread_state_url=thread_state_url,
             plugins=_name_list("SLACK_AGENT_RUNTIME_PLUGINS"),
+            builtin_plugins=_builtin_plugin_list("SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS"),
             mcp_config_path=os.getenv("SLACK_AGENT_RUNTIME_MCP_CONFIG", "").strip(),
             mcp_max_steps=_positive_int("SLACK_AGENT_RUNTIME_MCP_MAX_STEPS", default=8),
             mcp_tool_timeout_seconds=_positive_float(

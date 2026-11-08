@@ -97,6 +97,8 @@ spec:
               value: {{ .Values.config.threadStateBackend | quote }}
             - name: SLACK_AGENT_RUNTIME_PLUGINS
               value: {{ .Values.config.plugins | quote }}
+            - name: SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS
+              value: {{ .Values.config.builtinPlugins | quote }}
             {{- if .Values.coding.repositories }}
             - name: SLACK_AGENT_RUNTIME_GITHUB_TOKEN
               valueFrom:

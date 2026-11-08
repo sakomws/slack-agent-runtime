@@ -83,6 +83,76 @@ def test_coding_plugin_is_opt_in(
     assert github_client_factory.call_count == 3
 
 
+def test_optional_builtin_plugins_can_be_selected_independently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        bot_module,
+        "AsyncSocketModeHandler",
+        Mock(return_value=AsyncMock()),
+    )
+    github_client = AsyncMock()
+    github_client.allowed_repositories = frozenset({"owner/repo"})
+    github_client_factory = Mock(return_value=github_client)
+    monkeypatch.setattr(bot_module, "GitHubCodingClient", github_client_factory)
+    settings = replace(
+        _settings(),
+        builtin_plugins=("reviews",),
+        coding_github_token="github-token",
+        coding_repositories=frozenset({"owner/repo"}),
+        admin_user_ids=frozenset({"admin"}),
+    )
+
+    bot = SlackAgentRuntime(settings, inference_client=AsyncMock())
+
+    assert tuple(plugin.name for plugin in bot._plugins.plugins)[-1] == "reviews"
+    assert "coding" not in {plugin.name for plugin in bot._plugins.plugins}
+    assert "security_audit" not in {plugin.name for plugin in bot._plugins.plugins}
+    assert github_client_factory.call_count == 1
+
+
+def test_empty_builtin_selection_disables_configured_optional_plugins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        bot_module,
+        "AsyncSocketModeHandler",
+        Mock(return_value=AsyncMock()),
+    )
+    github_client_factory = Mock()
+    monkeypatch.setattr(bot_module, "GitHubCodingClient", github_client_factory)
+    settings = replace(
+        _settings(),
+        builtin_plugins=(),
+        coding_github_token="github-token",
+        coding_repositories=frozenset({"owner/repo"}),
+    )
+
+    bot = SlackAgentRuntime(settings, inference_client=AsyncMock())
+
+    assert tuple(plugin.name for plugin in bot._plugins.plugins) == (
+        "commands",
+        "conversation",
+        "feedback",
+        "assistant",
+    )
+    github_client_factory.assert_not_called()
+
+
+def test_selected_builtin_requires_its_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        bot_module,
+        "AsyncSocketModeHandler",
+        Mock(return_value=AsyncMock()),
+    )
+    settings = replace(_settings(), builtin_plugins=("security_audit",))
+
+    with pytest.raises(RuntimeError, match=r"security_audit.*GITHUB_TOKEN"):
+        SlackAgentRuntime(settings, inference_client=AsyncMock())
+
+
 @pytest.mark.asyncio
 async def test_readiness_checks_slack_and_configured_model(
     monkeypatch: pytest.MonkeyPatch,

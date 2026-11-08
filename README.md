@@ -346,8 +346,28 @@ Optional plugins are listed by entry-point name in load order:
 SLACK_AGENT_RUNTIME_PLUGINS=echo,incident-tools
 ```
 
-An empty value loads only the built-in plugins. Installed plugins are never
+An empty value disables all external plugins. Installed plugins are never
 imported unless explicitly selected.
+
+Optional built-ins are selected separately:
+
+```dotenv
+# Preserve configuration-driven behavior.
+SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS=auto
+
+# Or load only selected optional built-ins.
+SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS=mcp,reviews
+
+# An explicit empty value disables every optional built-in.
+SLACK_AGENT_RUNTIME_BUILTIN_PLUGINS=
+```
+
+Valid names are `mcp`, `coding`, `reviews`, and `security_audit`. Core command,
+conversation, feedback, and assistant plugins always load. In `auto` mode, MCP
+loads when servers are configured, while coding, reviews, and security audits
+load when the GitHub token and repository allowlist are configured. An
+explicitly selected built-in fails startup when its required configuration is
+missing.
 
 ## Direct MCP tools
 
@@ -648,7 +668,8 @@ only help from currently enabled plugins is shown.
 
 Plugin guarantees:
 
-- built-ins always load first and optional plugins follow `SLACK_AGENT_RUNTIME_PLUGINS` order;
+- core and selected built-ins load first, followed by external plugins in
+  `SLACK_AGENT_RUNTIME_PLUGINS` order;
 - duplicate names or routes and invalid namespaces fail at startup;
 - missing or broken selected packages fail readiness with an actionable error;
 - handler failures are logged without secrets and do not stop Socket Mode;

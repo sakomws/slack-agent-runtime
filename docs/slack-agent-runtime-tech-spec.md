@@ -228,7 +228,8 @@ The implementation is acceptable when all of the following remain true:
 
 #### Plugins
 
-- Load built-in plugins before explicitly selected external plugins.
+- Always load core plugins. Load optional built-ins according to the built-in
+  selector, then load explicitly selected external plugins.
 - Reject duplicate plugin names, route conflicts, and invalid namespaces.
 - Provide typed contexts and namespaced JSON-compatible plugin state.
 - Roll back started plugins when lifecycle startup fails.

@@ -52,6 +52,7 @@ config:
   streamUpdateIntervalSeconds: 1
   threadStateBackend: memory
   plugins: ""
+  builtinPlugins: auto
 
 coding:
   repositories: ""
