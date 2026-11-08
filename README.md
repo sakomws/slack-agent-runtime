@@ -59,7 +59,9 @@ hostile repository code.
 See the [technical specification](docs/slack-agent-runtime-tech-spec.md) for
 requirements, decisions, risks, and rollout work. The
 [30-minute talk](docs/slack-agent-runtime-30-minute-talk.md) provides a guided
-architecture walkthrough.
+architecture walkthrough. The [roadmap](docs/roadmap.md) prioritizes
+deterministic completion evidence, recovery, cost controls, and learning from
+repeated failures.
 
 ## Install
 
