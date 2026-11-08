@@ -33,10 +33,8 @@ def _roots(tmp_path: Path) -> tuple[Path, Path]:
     return target, skill
 
 
-@pytest.mark.asyncio
-async def test_security_audit_worker_writes_only_canonical_outputs(tmp_path: Path) -> None:
-    target, skill = _roots(tmp_path)
-    outputs = {
+def _outputs() -> dict[str, str]:
+    return {
         "run-metadata.json": json.dumps({"run_status": "complete"}),
         "architecture.md": "# Architecture",
         "coverage-ledger.json": "[]",
@@ -45,6 +43,12 @@ async def test_security_audit_worker_writes_only_canonical_outputs(tmp_path: Pat
         "FINDINGS-DETAIL.md": "# Finding details",
         "NEEDS-VALIDATION.md": "# Needs validation",
     }
+
+
+@pytest.mark.asyncio
+async def test_security_audit_worker_writes_only_canonical_outputs(tmp_path: Path) -> None:
+    target, skill = _roots(tmp_path)
+    outputs = _outputs()
     calls = tuple(
         InferenceToolCall(
             f"call-{index}",
@@ -72,6 +76,48 @@ async def test_security_audit_worker_writes_only_canonical_outputs(tmp_path: Pat
     assert result.output_files == tuple(outputs)
     assert result.agent_invocations == 0
     assert (tmp_path / "output" / "REPORT.md").read_text(encoding="utf-8") == "# Report\n"
+
+
+@pytest.mark.asyncio
+async def test_security_audit_worker_forces_summary_after_finalization_budget(
+    tmp_path: Path,
+) -> None:
+    target, skill = _roots(tmp_path)
+    calls = tuple(
+        InferenceToolCall(
+            f"call-{index}",
+            "write_audit_file",
+            {"path": name, "content": content},
+        )
+        for index, (name, content) in enumerate(_outputs().items())
+    )
+    client = AsyncMock()
+    client.complete.side_effect = [_result("", calls), _result("Bounded audit complete")]
+
+    result = await SecurityAuditWorker(
+        client,
+        target=target,
+        skill_dir=skill,
+        output_dir=tmp_path / "output",
+        max_steps=1,
+    ).run(
+        repository="owner/repo",
+        source_ref="a" * 40,
+        profile="quick",
+        scope=".",
+        model="model",
+    )
+
+    assert result.summary == "Bounded audit complete"
+    first_tool_names = {
+        schema["function"]["name"] for schema in client.complete.await_args_list[0].kwargs["tools"]
+    }
+    assert first_tool_names == {
+        "read_audit_file",
+        "write_audit_file",
+        "validate_audit_files",
+    }
+    assert client.complete.await_args_list[1].kwargs["tools"] == ()
 
 
 @pytest.mark.asyncio

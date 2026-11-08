@@ -30,6 +30,9 @@ _REQUIRED_OUTPUTS = (
 _JSON_OUTPUTS = frozenset({"run-metadata.json", "coverage-ledger.json", "findings.json"})
 _PROTECTED_PARTS = frozenset({".git", ".env", ".secrets", "secrets"})
 _PROTECTED_SUFFIXES = frozenset({".key", ".pem", ".p12", ".pfx"})
+_FINALIZATION_TOOL_NAMES = frozenset(
+    {"read_audit_file", "write_audit_file", "validate_audit_files"}
+)
 _SECRET_LIKE = re.compile(
     r"(?:github_pat_|gh[pousr]_|xox[baprs]-|sk-[A-Za-z0-9_-]{12,})[A-Za-z0-9_-]*",
     re.IGNORECASE,
@@ -122,11 +125,30 @@ class SecurityAuditWorker:
                 ),
             },
         ]
-        for _ in range(self._max_steps):
+        for step in range(self._max_steps):
+            remaining_steps = self._max_steps - step
+            if remaining_steps == 16:
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": (
+                            "Sixteen parent turns remain. Exploration and delegation are now "
+                            "closed. Synthesize the evidence already in this conversation, "
+                            "write all seven canonical audit files, run validate_audit_files, "
+                            "fix every validator error, and finish. Record unresolved work as "
+                            "deferred or needs_validation; do not request source tools or new "
+                            "agents."
+                        ),
+                    }
+                )
             result = await self._client.complete(
                 messages=messages,
                 model=model,
-                tools=self._parent_schemas(),
+                tools=(
+                    self._finalization_schemas()
+                    if remaining_steps <= 16
+                    else self._parent_schemas()
+                ),
                 temperature=0.1,
                 max_tokens=16_000,
                 reasoning_effort="high",
@@ -139,13 +161,55 @@ class SecurityAuditWorker:
                     self._agent_count,
                 )
             messages.append(_assistant_message(result.content, result.tool_calls))
-            tool_results = await self._execute_parent_calls(result.tool_calls, model=model)
+            tool_results = await self._execute_parent_calls(
+                result.tool_calls,
+                model=model,
+                allowed_names=(_FINALIZATION_TOOL_NAMES if remaining_steps <= 16 else None),
+            )
             messages.extend(tool_results)
-        raise SecurityAuditError("Security audit parent step limit exceeded")
+        try:
+            outputs = self._validate_outputs()
+        except SecurityAuditError as exc:
+            raise SecurityAuditError(f"Security audit parent step limit exceeded: {exc}") from exc
+        messages.append(
+            {
+                "role": "system",
+                "content": (
+                    "The parent turn budget is exhausted and the canonical files exist. "
+                    "Return only a concise factual completion summary without tool calls."
+                ),
+            }
+        )
+        final = await self._client.complete(
+            messages=messages,
+            model=model,
+            tools=(),
+            temperature=0.1,
+            max_tokens=2_000,
+        )
+        return SecurityAuditResult(
+            _sanitize(final.content, 8_000) or "Security audit completed.",
+            outputs,
+            self._agent_count,
+        )
 
     def _parent_schemas(self) -> tuple[InferenceToolSchema, ...]:
         return (
             *self._source_tools.schemas,
+            *self._finalization_schemas(),
+            _schema(
+                "spawn_agent",
+                "Run one fresh read-only security research or verification agent",
+                {
+                    "role": {"type": "string"},
+                    "prompt": {"type": "string"},
+                },
+                required=("role", "prompt"),
+            ),
+        )
+
+    def _finalization_schemas(self) -> tuple[InferenceToolSchema, ...]:
+        return (
             _schema(
                 "read_audit_file",
                 "Read one canonical audit output file written by the parent",
@@ -161,15 +225,6 @@ class SecurityAuditWorker:
                 required=("path", "content"),
             ),
             _schema(
-                "spawn_agent",
-                "Run one fresh read-only security research or verification agent",
-                {
-                    "role": {"type": "string"},
-                    "prompt": {"type": "string"},
-                },
-                required=("role", "prompt"),
-            ),
-            _schema(
                 "validate_audit_files",
                 "Run the pinned skill's findings and coverage-ledger validators",
                 {},
@@ -182,15 +237,29 @@ class SecurityAuditWorker:
         calls: tuple[InferenceToolCall, ...],
         *,
         model: str,
+        allowed_names: frozenset[str] | None = None,
     ) -> list[InferenceMessage]:
         if calls and all(call.name == "spawn_agent" for call in calls):
             contents = await asyncio.gather(
-                *(self._execute_parent_call(call, model=model) for call in calls)
+                *(
+                    self._execute_parent_call(
+                        call,
+                        model=model,
+                        allowed_names=allowed_names,
+                    )
+                    for call in calls
+                )
             )
         else:
             contents = []
             for call in calls:
-                contents.append(await self._execute_parent_call(call, model=model))
+                contents.append(
+                    await self._execute_parent_call(
+                        call,
+                        model=model,
+                        allowed_names=allowed_names,
+                    )
+                )
         return [
             {
                 "role": "tool",
@@ -200,8 +269,18 @@ class SecurityAuditWorker:
             for call, content in zip(calls, contents, strict=True)
         ]
 
-    async def _execute_parent_call(self, call: InferenceToolCall, *, model: str) -> str:
+    async def _execute_parent_call(
+        self,
+        call: InferenceToolCall,
+        *,
+        model: str,
+        allowed_names: frozenset[str] | None,
+    ) -> str:
         try:
+            if allowed_names is not None and call.name not in allowed_names:
+                raise SecurityAuditError(
+                    f"Tool `{call.name}` is unavailable during audit finalization"
+                )
             if call.name in self._source_tools.names:
                 return self._source_tools.execute(call.name, call.arguments)
             if call.name == "read_audit_file":
