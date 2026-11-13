@@ -86,7 +86,7 @@ jobs:
           PY
 
       - name: Notify Slack that audit started
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -96,7 +96,7 @@ jobs:
             text: "🔐 Security audit `${{ inputs.job_id }}` started in `${{ github.repository }}` with `${{ inputs.profile }}` profile."
 
       - name: Check out target repository without credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: target
           ref: ${{ inputs.base_ref }}
@@ -108,7 +108,7 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Check out Slack Agent Runtime without credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ inputs.runtime_repository }}
           ref: ${{ inputs.runtime_ref }}
@@ -116,7 +116,7 @@ jobs:
           persist-credentials: false
 
       - name: Check out pinned Cloudflare security audit skill
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cloudflare/security-audit-skill
           ref: c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
@@ -124,7 +124,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -187,7 +187,7 @@ jobs:
         run: cat "$RUNNER_TEMP/security-audit-output/REPORT.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload validated security audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-audit-${{ inputs.job_id }}
           path: ${{ runner.temp }}/security-audit-output
@@ -196,7 +196,7 @@ jobs:
 
       - name: Notify Slack of success
         if: success()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -207,7 +207,7 @@ jobs:
 
       - name: Notify Slack of failure
         if: failure()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
@@ -218,7 +218,7 @@ jobs:
 
       - name: Notify Slack of cancellation
         if: cancelled()
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_CODING_BOT_TOKEN }}
